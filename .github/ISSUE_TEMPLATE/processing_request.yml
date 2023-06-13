@@ -70,9 +70,9 @@ body:
       description: Share results to the following additional venues (other than Amazon S3)
       options:
         - label: Google Earth Engine (GEE)
-          required: true
+          required: false
         - label: NASA Distributed Active Archive Centers (DAAC)
-          required: true
+          required: false
   - type: textarea
     id: notes
     attributes:
