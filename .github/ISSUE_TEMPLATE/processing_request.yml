@@ -1,9 +1,7 @@
 name: Processing Request
 description: Request an OPERA SDS processing task
 title: "[Processing Request]: "
-labels: 
-  - "processing-request"
-  - "needs-triage"
+labels: [ "processing-request", "needs-triage" ]
 body:
   - type: markdown
     attributes:
