@@ -61,7 +61,6 @@ body:
       label: Input Data
       description: Please type in a list of granules to process (or attach a text file to the ticket), or a datetime range and/or bounding box, or indicate a previous request's input data.
       placeholder: Input granules
-      value: ""
     validations:
       required: true
   - type: checkboxes
@@ -80,6 +79,5 @@ body:
       label: Additional Notes
       description: Do you have any additional comments / notes?
       placeholder: Tell us any additional information about your request
-      value: ""
     validations:
       required: false
