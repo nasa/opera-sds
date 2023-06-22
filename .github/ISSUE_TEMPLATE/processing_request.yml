@@ -11,7 +11,7 @@ body:
     id: venue
     attributes:
       label: Venue
-      description: Please select a processing venue. NOTE: "OPS" option _will_ publish to NASA DAACs.
+      description: Please select a processing venue. NOTE: "OPS" option will publish to NASA DAACs.
       multiple: false
       options:
         - "PST"
