@@ -11,12 +11,13 @@ body:
     id: venue
     attributes:
       label: Venue
-      description: Please select a processing venue
+      description: Please select a processing venue. NOTE: "OPS" option _will_ publish to NASA DAACs.
       multiple: false
       options:
         - "PST"
         - "ADT"
         - "OPS"
+        - "VnV"
     validations:
       required: yes
   - type: dropdown
@@ -40,21 +41,13 @@ body:
     validations:
       required: false
   - type: input
-    id: pge-version
+    id: sds-version
     attributes:
       label: PGE Version
-      description: Which PGE version should be utilized?
+      description: Which SDS version should be utilized?
       placeholder: latest
     validations:
       required: false   
-  - type: input
-    id: pcm-version
-    attributes:
-      label: PCM Version
-      description: Which PCM version should be utilized?
-      placeholder: latest
-    validations:
-      required: false
   - type: textarea
     id: input-data
     attributes:
@@ -71,7 +64,7 @@ body:
       options:
         - label: Google Earth Engine (GEE)
           required: false
-        - label: NASA Distributed Active Archive Centers (DAAC)
+        - label: NASA Distributed Active Archive Centers (DAAC) User Acceptance Testing (UAT)
           required: false
   - type: textarea
     id: notes
