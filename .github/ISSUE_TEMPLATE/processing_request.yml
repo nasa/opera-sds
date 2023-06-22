@@ -43,7 +43,7 @@ body:
   - type: input
     id: sds-version
     attributes:
-      label: PGE Version
+      label: SDS Version
       description: Which SDS version should be utilized?
       placeholder: latest
     validations:
