@@ -1,0 +1,76 @@
+name: Processing Request
+description: Request an OPERA SDS processing task
+title: "[Processing Request]: "
+labels: [ "processing-request", "needs-triage" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > _Thanks for filing a new processing request. We appreciate your time and effort. Please answer a few questions._
+  - type: dropdown
+    id: venue
+    attributes:
+      label: Venue
+      description: Please select a processing venue. NOTE - selecting "OPS" option _will_ publish to NASA DAACs.
+      multiple: false
+      options:
+        - "PST"
+        - "ADT"
+        - "OPS"
+        - "VnV"
+    validations:
+      required: yes
+  - type: dropdown
+    id: product
+    attributes:
+      label: Product
+      description: Please select OPERA product(s)
+      multiple: true
+      options:
+        - "DSWx-HLS"
+        - "RTC-S1"
+        - "CSLC-S1"
+    validations:
+      required: yes
+  - type: input
+    id: sas-version
+    attributes:
+      label: SAS Version
+      description: Which SAS version should be utilized?
+      placeholder: latest
+    validations:
+      required: false
+  - type: input
+    id: sds-version
+    attributes:
+      label: SDS Version
+      description: Which SDS version should be utilized?
+      placeholder: latest
+    validations:
+      required: false   
+  - type: textarea
+    id: input-data
+    attributes:
+      label: Input Data
+      description: Please type in a list of granules to process (or attach a text file to the ticket), or a datetime range and/or bounding box, or indicate a previous request's input data.
+      placeholder: Input granules
+    validations:
+      required: true
+  - type: checkboxes
+    id: results
+    attributes:
+      label: Share Results
+      description: Share results to the following additional venues (other than Amazon S3)
+      options:
+        - label: Google Earth Engine (GEE)
+          required: false
+        - label: NASA Distributed Active Archive Centers (DAAC) User Acceptance Testing (UAT)
+          required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Do you have any additional comments / notes?
+      placeholder: Tell us any additional information about your request
+    validations:
+      required: false
