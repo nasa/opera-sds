@@ -6,6 +6,7 @@
 |                  |                   |                  |             |                  | CSLC 6.2    | CSLC 0.5.2     | 2023-09-21         |                   |
 |                  |                   |                  |             |                  | DSWx ?.?    | DSWx ?.?.?     | YYYY-MM-DD         |                   |
 | R2 RC10          | 2.0.0-rc.10.0     | 2023-08-17       | PGE ?.?.?   | YYYY-MM-DD       | RTC ?.?     | RTC ?.?.?      | YYYY-MM-DD         |                   |
-|                  |                   | 2023-08-17       |             |                  | RTC ?.?     |                |                    |                   |
+|                  |                   | 2023-08-17       |             |                  | CSLC ?.?    | CSLC ?.?.?     | YYYY-MM-DD         |                   |
+|                  |                   |                  |             |                  | DSWx ?.?    | DSWx ?.?.?     | YYYY-MM-DD         |                   |
 
 -------
