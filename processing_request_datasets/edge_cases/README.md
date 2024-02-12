@@ -22,3 +22,7 @@ Total of 1 file.
      - Burst ID
      - Notes
    - Each case can be run by starting an on-demand job, with native-id option, using the 'RTC-S1 granule native-id' field.
+2. RTC-S1 granule names for testing along the antimeridian.
+   - rtc_antimeridian_complete_20231004_thru_20240208.txt
+   - Each line is an RTC granule mapping to a unique MGRS Tile Set ID + date combo.
+   - List was derived from a query of RTC bursts within 0.1 degrees longitude of the antimeridian.
