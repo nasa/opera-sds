@@ -27,6 +27,6 @@ Total of 1 file.
    - Each line is an RTC granule mapping to a unique MGRS Tile Set ID + date combo.
    - List was derived from a query of RTC bursts within 0.1 degrees longitude of the antimeridian.
 3. RTC-S1 granule names for testing at high latitudes (80 degrees longitude and higher)
-   - rtc_high_latitude_complete_20231004_thru_20240211.txt
+   - rtc_high_latitude_complete_20231004_thru_20240311.txt
    - Each line is an RTC granule mapping to a unique MGRS Tile Set ID + date combo.
    - List was derived from a query of RTC bursts at 80 degrees latitude and higher.
