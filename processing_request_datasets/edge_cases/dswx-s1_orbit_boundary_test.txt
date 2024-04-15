@@ -1,0 +1,18 @@
+Query by sensor time:
+start time:  2024-02-14T15:36:00Z
+end time:    2024-02-14T15:46:00Z
+
+Goal:  to show that MS_160_1 gets produced by the DSWx-S1 pipeline.
+
+Expected Results:  TileSets excuted:  MS_159_179, MS_159_180, MS_160_1, and MS_160_2 definitely produced (due to having 100% coverage).  TileSets MS_159_177, MS_159_178, and MS_160_3 may also get produced, depending on the value of the Coverage Threshold (see table below).
+
+Here are the MGRS Set IDs intersecting that time range:
+MGRS Set ID      Coverage Percentage    Matching Burst Count    Total Burst Count
+MS_159_177                      7.32                       3                   41
+MS_159_178                     85                         34                   40
+MS_159_179                    100                         41                   41
+MS_159_180                    100                         41                   41
+MS_160_1                      100                         41                   41
+MS_160_2                      100                         41                   41
+MS_160_3                       42.5                       17                   40
+

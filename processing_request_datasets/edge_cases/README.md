@@ -32,3 +32,5 @@ Total of 1 file.
    - rtc_high_latitude_complete_20231004_thru_20240311_landonly.txt --> contains land TileSets only (water TileSets are excluded).
    - Each line is an RTC granule mapping to a unique MGRS Tile Set ID + date combo.
    - List was derived from a query of RTC bursts at 80 degrees latitude and higher.
+4. Test at an orbit boundary
+   - dswx-s1_orbit_boundary_test.txt --> contains a datetime range to use in the test, and the expected results.
