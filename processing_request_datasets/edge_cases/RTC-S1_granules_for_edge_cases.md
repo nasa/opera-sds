@@ -8,6 +8,6 @@
 | OPERA_L2_RTC-S1_T004-006595-IW1_20231111T230403Z_20231112T144309Z_S1A_30_v1.0 | MS_4_15            | 20231111 | t004-006595-iw1 | only water covered                                                                         |
 | OPERA_L2_RTC-S1_T033-068863-IW1_20231101T224635Z_20231104T141042Z_S1A_30_v1.0 | MS_33_13           | 20231101 | t033-068863-iw1 | only water covered, ancillary data may have only invalid values                            |
 | OPERA_L2_RTC-S1_T074-157291-IW2_20231023T183145Z_20231024T054532Z_S1A_30_v1.0 | MS_74_46           | 20231023 | t074-157291-iw2 | 56 bursts are required also very high latitude (northern Greenland)                        |
-| OPERA_L2_RTC-S1_T001-000692-IW1_20231111T183241Z_20231116T051007Z_S1A_30_v1.0 | MS_1_59            | 20231111 | t001-000692-iw1 | antimeridian, also it's a "water" tileSet, which won't run with v0.3 of the TileSet DB     |
+| OPERA_L2_RTC-S1_T001-000692-IW1_20231111T183241Z_20231116T051007Z_S1A_30_v1.0 | MS_1_59            | 20231111 | t001-000692-iw1 | antimeridian, also it's a "water" tileSet, which won't run with v0.2 of the TileSet DB     |
 | OPERA_L2_RTC-S1_T001-000681-IW2_20231111T183211Z_20231116T050657Z_S1A_30_v1.0 | MS_1_58            | 20231111 | t001-000681-iw2 | antimeridian                                                                               |
 | OPERA_L2_RTC-S1_T026-054262-IW2_20231101T113522Z_20231104T061210Z_S1A_30_v1.0 | MS_26_48           | 20231101 | t026-054262-iw2 | 61 total bursts, might lead to memory issues, also very high latitude (northern Greenland) |
