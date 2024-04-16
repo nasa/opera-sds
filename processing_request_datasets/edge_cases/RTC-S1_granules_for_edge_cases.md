@@ -11,3 +11,4 @@
 | OPERA_L2_RTC-S1_T001-000692-IW1_20231111T183241Z_20231116T051007Z_S1A_30_v1.0 | MS_1_59            | 20231111 | t001-000692-iw1 | antimeridian, also it's a "water" tileSet, which won't run with v0.2 of the TileSet DB     |
 | OPERA_L2_RTC-S1_T001-000681-IW2_20231111T183211Z_20231116T050657Z_S1A_30_v1.0 | MS_1_58            | 20231111 | t001-000681-iw2 | antimeridian                                                                               |
 | OPERA_L2_RTC-S1_T026-054262-IW2_20231101T113522Z_20231104T061210Z_S1A_30_v1.0 | MS_26_48           | 20231101 | t026-054262-iw2 | 61 total bursts, might lead to memory issues, also very high latitude (northern Greenland) |
+| OPERA_L2_RTC-S1_T004-006580-IW2_20231111T230322Z_20231112T144056Z_S1A_30_v1.0 | MS_4_14            | 20231112 | t004-006580-iw2 | Extremely small land portion with mostly water coverage                                    |
