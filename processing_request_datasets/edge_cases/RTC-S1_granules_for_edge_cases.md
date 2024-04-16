@@ -1,6 +1,6 @@
 | RTC-S1 granule native-id                                                      | TileSetID          | UTC Date | Burst ID        | Notes                                                                                      |
 | ----------------------------------------------------------------------------- | ------------------ | -------- | --------------- | ------------------------------------------------------------------------------------------ |
-| OPERA_L2_RTC-S1_T020-041121-IW1_20231101T013115Z_20231104T041913Z_S1A_30_v1.0 | MS_20_29, MS_20_30 | 20231101 | t020-041121-iw1 | one available burst on the border with MS_20_30                                            |
+| OPERA_L2_RTC-S1_T020-041121-IW1_20231101T013115Z_20231104T041913Z_S1A_30_v1.0 | MS_20_29, MS_20_30 | 20231101 | t020-041121-iw1 | MS_20_29 has one available burst, and is part of MS_20_30 which has 33 available bursts    |
 | OPERA_L2_RTC-S1_T033-069004-IW2_20231101T225305Z_20231104T110629Z_S1A_30_v1.0 | MS_33_26           | 20231101 | t033-069004-iw2 | four polarizations are available (VV/VH/HH/HV)                                             |
 | OPERA_L2_RTC-S1_T033-069004-IW2_20231101T225305Z_20231209T024340Z_S1A_30_v1.0 | MS_33_26           | 20231101 | t033-069004-iw2 | four polarizations are available (VV/VH/HH/HV), also an update of burst on previous line   |
 | OPERA_L2_RTC-S1_T135-288082-IW1_20231108T224420Z_20231114T081032Z_S1A_30_v1.0 | MS_135_25          | 20231108 | t135-288082-iw1 | HH/HV polarizations are available                                                          |
