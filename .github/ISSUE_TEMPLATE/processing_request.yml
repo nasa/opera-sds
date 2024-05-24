@@ -31,6 +31,7 @@ body:
         - "RTC-S1"
         - "CSLC-S1"
         - "DSWx-S1"
+        - "DISP-S1"
     validations:
       required: yes
   - type: input
