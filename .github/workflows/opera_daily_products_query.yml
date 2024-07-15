@@ -1,0 +1,25 @@
+name: OPERA Daily Products Query
+
+on:
+  schedule:
+    # Runs around midnight Pacific Time (UTC-7)
+    # Doesn't account for daylight saving transitions
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  opera-daily-products-query:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9.6'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+    

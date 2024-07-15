@@ -57,6 +57,6 @@ for ic, collection in enumerate(COLLECTIONS):
             color=COLORS[ic], label=f"{LABELS[ic]}")
     plt.legend(loc="upper right")
 
-plt.savefig('opera_products_daily.png', bbox_inches='tight')
+plt.savefig('opera_daily_products_query.png', bbox_inches='tight')
 plt.close(fig)
 # plt.show()

@@ -1,2 +1,3 @@
 # Ignore OSX system files
 *.DS_Store
+.idea
