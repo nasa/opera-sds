@@ -10,12 +10,13 @@ from cmr import GranuleQuery
 import matplotlib.pyplot as plt
 logging.basicConfig(level=logging.INFO)
 
-NUM_DAYS = 3
+NUM_DAYS = 10
 COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1",
                "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1"]
 LABELS = ["HLSL30", "HLSS30", "DSWX-HLS",
           "S1A", "RTC-S1", "CSLC-S1"]
-COLORS = ["red", "blue", "green", "brown", "orange", "purple"]
+COLORS = ["greenyellow", "greenyellow", "darkgreen",
+          "skyblue", "deepskyblue", "deepskyblue"]
 
 today = date.today()
 dates_list: list[date] = [today - timedelta(days=day) for day in range(NUM_DAYS)]
