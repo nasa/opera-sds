@@ -27,5 +27,8 @@ jobs:
         run: |
           cd monitoring
           python opera_daily_products_query.py
+
+      - name: Commit and Push to Github
+        uses: stefanzweifel/git-auto-commit-action@v5
           
     
