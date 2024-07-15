@@ -1,3 +1,4 @@
+
 name: OPERA Daily Products Query
 
 on:
@@ -28,9 +29,13 @@ jobs:
           cd monitoring
           python opera_daily_products_query.py
 
+      # reference: https://github.com/stefanzweifel/git-auto-commit-action
       - name: Commit and Push to Github
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
             file_pattern: 'monitoring/*.png'
+            commit_user_name: 'opera_sds'
+            commit_user_email: 'opera-sds@jpl.nasa.gov'
+            commit_author: OPERA SDS Github Action
           
     
