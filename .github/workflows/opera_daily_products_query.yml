@@ -30,5 +30,7 @@ jobs:
 
       - name: Commit and Push to Github
         uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+            file_pattern: 'monitoring/*.png'
           
     
