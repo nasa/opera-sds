@@ -1,0 +1,2 @@
+python-cmr==0.11.0
+matplotlib==3.9.1
