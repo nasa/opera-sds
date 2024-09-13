@@ -10,13 +10,13 @@ from cmr import GranuleQuery
 import matplotlib.pyplot as plt
 logging.basicConfig(level=logging.INFO)
 
-NUM_DAYS = 10
-COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1",
-               "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1"]
-LABELS = ["HLSL30", "HLSS30", "DSWX-HLS",
-          "S1A", "RTC-S1", "CSLC-S1"]
-COLORS = ["greenyellow", "greenyellow", "darkgreen",
-          "skyblue", "deepskyblue", "deepskyblue"]
+NUM_DAYS = 3
+COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DSWX-HLS_V1",
+               "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
+LABELS = ["HLSL30", "HLSS30", "DSWX-HLS", "DSWX-HLS",
+          "S1A", "RTC-S1", "CSLC-S1", "DSWX-S1"]
+COLORS = ["greenyellow", "greenyellow", "darkgreen", "darkgreen",
+          "skyblue", "deepskyblue", "deepskyblue", "deepskyblue"]
 
 today = date.today()
 dates_list: list[date] = [today - timedelta(days=day) for day in range(NUM_DAYS)]
@@ -27,7 +27,7 @@ logging.info(dates_list)
 # configure plotting
 plt.rcParams["font.size"] = 4
 plt.rcParams["figure.titlesize"] = 10
-fig, ax = plt.subplots(2,  3)
+fig, ax = plt.subplots(2,  4)
 fig.suptitle('Number of Products / Day', fontsize=12)
 fig.text(0.5, 0.9, f"{dates_list[0]} - {dates_list[NUM_DAYS-1]}",
          horizontalalignment="center", fontsize=10)
@@ -52,7 +52,7 @@ for ic, collection in enumerate(COLLECTIONS):
         products[i] = num_products
 
     # plot this product
-    plt.subplot(2, 3, ic+1)
+    plt.subplot(2, 4, ic+1)
     plt.bar(dates_list, products, width=0.9,
             tick_label=[x.strftime("%d") for x in dates_list],
             color=COLORS[ic], label=f"{LABELS[ic]}")
