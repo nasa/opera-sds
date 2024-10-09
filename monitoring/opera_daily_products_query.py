@@ -14,10 +14,17 @@ logging.basicConfig(level=logging.INFO)
 NUM_DAYS = 10
 COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1",
                "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
-LABELS = ["HLSL30", "HLSS30", "DSWX-HLS",
-          "S1A", "RTC-S1", "CSLC-S1", "DSWX-S1"]
-COLORS = ["greenyellow", "greenyellow", "darkgreen",
-          "skyblue", "deepskyblue", "deepskyblue", "deepskyblue"]
+LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",
+          "S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)"]
+COLORS = [
+    (0.0, 0.85, 0.60),   # Light Green (HLSL30)
+    (0.0, 0.85, 0.60),   # Light Green (HLSS30)
+    (0.0, 0.39, 0.25),   # Dark Green  (DSWX-HLS)
+    (0.0, 0.62, 0.95),   # Light Blue  ()
+    (0.0, 0.35, 0.5),    # Dark Blue   ()
+    (0.0, 0.35, 0.5),    # Dark Blue   ()
+    (0.0, 0.35, 0.5)     # Dark Blue   ()
+]
 
 today = date.today()
 now = strftime("%Y-%m-%d %H:%M:%S", gmtime())
@@ -35,8 +42,7 @@ fig.suptitle(f'# of Products / Day from: {dates_list[0]} to: {dates_list[NUM_DAY
 fig.text(0.5, 0.9, f"Updated: {now} (GMT)",
          horizontalalignment="center", fontsize=10)
 
-
-# loop over collections11
+# loop over collections
 irow = 0
 icol = 0
 for ic, collection in enumerate(COLLECTIONS):
@@ -69,6 +75,8 @@ for ic, collection in enumerate(COLLECTIONS):
         irow += 1
         icol = 0
 
+# Adjust space between plots to avoid overlap
+fig.subplots_adjust(left=None, right=None, top=None, bottom=None, wspace=0.5, hspace=0.5)
 
 plt.savefig('opera_daily_products_query.png', bbox_inches='tight', dpi=400)
 plt.close(fig)
