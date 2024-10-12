@@ -95,5 +95,5 @@ for ic, collection in enumerate(COLLECTIONS):
     ax.set_ylabel("Number of Products")
 
 plt.tight_layout()
-plt.savefig('scaled_opera_daily_products.png', bbox_inches='tight', dpi=400)
+plt.savefig('opera_daily_products_query.png', bbox_inches='tight', dpi=400)
 # plt.show()
