@@ -22,7 +22,6 @@ def get_args():
     """
     parser = argparse.ArgumentParser(description="Generate daily plots.")
     parser.add_argument('-q', '--quiet', action='store_true', help='Minimize output and run progress bar.')
-    parser.add_argument('-g', '--geojson', default="", help="geojson filepath")
     return parser.parse_args()
 
 
@@ -148,27 +147,7 @@ def check_data_points(sample, sigma_value):
             # TODO - may not need this test (check with Luca)
 
 
-def sort_counter_clockwise_coordinates(list_of_xy_coords):
-    #cmr only accepts points in counterclockwise
-    # print(list_of_xy_coords)
-    # get rid of duplicate coordinates
-    list_of_xy_coords = list(set(map(tuple,list_of_xy_coords)))
-    list_of_xy_coords = np.array(list_of_xy_coords)
-    cx, cy = list_of_xy_coords.mean(0)
-    x, y = list_of_xy_coords.T
-    angles = np.arctan2(x-cx, y-cy)
-    indices = np.argsort(-angles)
-    nodupe_list = list_of_xy_coords[indices]
-    nodupe_list = list(nodupe_list)
-    # cmr needs first and last to match
-    nodupe_list.append(nodupe_list[0])
-    print(nodupe_list)
-    print()
-    return nodupe_list
-    # return list_of_xy_coords[indices]
-
-
-def get_products(collection, date, geojson=None, geo_coordinates=None, north_america_flag=False, central_america_flag=False):
+def get_products(collection, date, north_america_flag=False, central_america_flag=False):
     '''
     Granule query api call
     '''
@@ -195,11 +174,7 @@ def get_products(collection, date, geojson=None, geo_coordinates=None, north_ame
     api = GranuleQuery()
     api.short_name(collection)
     api.temporal(date, date + timedelta(days=1))
-    if geojson:
-        for ilist in geo_coordinates:
-            counter_clockwise_coords = sort_counter_clockwise_coordinates(ilist[0])
-            api.polygon(counter_clockwise_coords)
-    elif north_america_flag:
+    if north_america_flag:
         api.polygon(NORTH_AMERICA_POLYGON)
     elif central_america_flag:
         api.polygon(CENTRAL_AMERICA_POLYGON)
@@ -208,7 +183,7 @@ def get_products(collection, date, geojson=None, geo_coordinates=None, north_ame
 
 
 
-def plot_products(quiet, geojson="", north_america_flag=False, central_america_flag=False):
+def plot_products(quiet):
     """
     Generates a series of subplots, each depicting the daily count of products for various collections
     over a period of 30 days.
@@ -223,11 +198,6 @@ def plot_products(quiet, geojson="", north_america_flag=False, central_america_f
     args = get_args()
     setup_logging(args.quiet)
 
-    if geojson:
-        f = open(geojson)
-        geojson_dict = json.load(f)
-        geo_coordinates = geojson_dict["features"][0]["geometry"]["coordinates"]
-
     NUM_DAYS = 30
     x_scale = 1.0  # Adjust to scale the width of the plot area
     y_scale = 0.9  # Adjust to scale the height of the plot area
@@ -239,11 +209,6 @@ def plot_products(quiet, geojson="", north_america_flag=False, central_america_f
     LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
               "S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)"]
 
-    '''
-    if north_america_flag or central_america_flag:
-        COLLECTIONS = ["SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
-        LABELS = ["S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)"]
-    '''
     NA_COLLECTIONS = ["SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
 
     # Use complementary colors to differential input and output
@@ -285,10 +250,6 @@ def plot_products(quiet, geojson="", north_america_flag=False, central_america_f
             using_lightened = False
 
         collection_name = collection
-        if north_america_flag:
-                collection_name = collection + " north america only"
-        elif central_america_flag:
-                collection_name = collection + " central america only"
 
         inner_progress_bar = tqdm(total=NUM_DAYS, desc=f"Processing {collection}", leave=False) if quiet else None
 
@@ -309,8 +270,6 @@ def plot_products(quiet, geojson="", north_america_flag=False, central_america_f
                 color = adjust_saturation(original_color, 15, lighten=False)  # False will darken
             else:
                 color = original_color  # Use the original color without any modification)
-
-
 
             if collection in NA_COLLECTIONS:
                 x_width = 0.4
@@ -362,10 +321,6 @@ def plot_products(quiet, geojson="", north_america_flag=False, central_america_f
 
     plt.tight_layout(pad=2.0)
     png_basename = 'opera_daily_products_query'
-    if north_america_flag:
-        png_basename += "_north_america_only"
-    elif central_america_flag:
-        png_basename += "_central_america_only"
     png_filename = png_basename + ".png"
 
     plt.savefig(png_filename, bbox_inches='tight', dpi=400)
@@ -380,10 +335,6 @@ def main():
     args = get_args()
     setup_logging(args.quiet)
     plot_products(args.quiet)
-    # plot_products(args.quiet, north_america_flag=True)
-    # plot_products(args.quiet, central_america_flag=True)
-    # if args.geojson:
-    #     plot_products(args.quiet, geojson=args.geojson)
 
 
 if __name__ == '__main__':
