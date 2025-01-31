@@ -6,6 +6,7 @@ import datetime
 from datetime import timedelta
 from time import gmtime, strftime
 import logging
+import json
 
 from cmr import GranuleQuery
 import numpy as np
@@ -146,6 +147,42 @@ def check_data_points(sample, sigma_value):
             # TODO - may not need this test (check with Luca)
 
 
+def get_products(collection, date, north_america_flag=False, central_america_flag=False):
+    '''
+    Granule query api call
+    '''
+    NORTH_AMERICA_POLYGON = [[-81.84375, 5.01167], [-76.5, 12.32118], [-63.84375, 19.63068],
+                            [-72.84375, 28.90813], [-67.78125, 37.6233], [-48.09375, 47.74415],
+                            [-52.875, 57.58387], [-34.3125, 60.39521], [-25.59375, 67.42358],
+                            [-13.5, 71.35947], [-8.4375, 82.60486], [-36.84375, 87.10301],
+                            [-119.25, 82.60486], [-130.21875, 74.45195], [-168.75, 72.20287],
+                            [-169.3125, 64.61224], [-167.44922, 61.97351], [-168.50391, 59.47844],
+                            [-178.875, 52.85668], [-178.875, 49.90476], [-144.98438, 57.35483],
+                            [-128.39063, 44.70377], [-119.25, 25.58661], [-97.3125, 8.7115],
+                            [-81.84375, 5.01167]]
+
+    CENTRAL_AMERICA_POLYGON = [[-114.64453, 32.79634], [-117.35156, 32.62063], [-118.54688, 28.94831],
+                              [-110.10938, 21.7965], [-108, 23.69416], [-106.59375, 18.91487],
+                              [-87.96094, 11.11338], [-80.50781, 5.91239], [-78.25781, 6.26381],
+                              [-76.79883, 8.43563], [-78.43359, 10.45628], [-82.21289, 10.59685],
+                              [-82.01953, 14.30153], [-82.47656, 17.63308], [-86.625, 17.35194],
+                              [-85.85156, 22.2718], [-95.76563, 25.99684], [-98.89453, 26.81794],
+                              [-99.73828, 28.36418], [-101.32031, 30.12127], [-103.07813, 30.19155],
+                              [-103.28906, 29.59414], [-104.37891, 29.94556], [-105.22266, 31.63237],
+                              [-108.94922, 32.01893], [-110.91797, 31.59868], [-114.64453, 32.79634]]
+
+    api = GranuleQuery()
+    api.short_name(collection)
+    api.temporal(date, date + timedelta(days=1))
+    if north_america_flag:
+        api.polygon(NORTH_AMERICA_POLYGON)
+    elif central_america_flag:
+        api.polygon(CENTRAL_AMERICA_POLYGON)
+    return api.hits()
+
+
+
+
 def plot_products(quiet):
     """
     Generates a series of subplots, each depicting the daily count of products for various collections
@@ -171,6 +208,9 @@ def plot_products(quiet):
                    "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
     LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
               "S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)"]
+
+    NA_COLLECTIONS = ["SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
+
     # Use complementary colors to differential input and output
     COLORS = [
         (0.0, 0.78, 0.55),   # Light Green
@@ -200,6 +240,7 @@ def plot_products(quiet):
     for ic, collection in enumerate(COLLECTIONS):
         ax = fig.add_subplot(2, 4, ic + 1)
         products = [0] * NUM_DAYS
+        na_products = [0] * NUM_DAYS
         current_month = dates_list[0].month  # Initialize the current month
         original_color = COLORS[ic]  # Store the original color
         # adjust lightening/darkening on month change based on what the graph represents
@@ -208,15 +249,17 @@ def plot_products(quiet):
         else:
             using_lightened = False
 
+        collection_name = collection
+
         inner_progress_bar = tqdm(total=NUM_DAYS, desc=f"Processing {collection}", leave=False) if quiet else None
 
         for i, date in enumerate(dates_list):
-            api = GranuleQuery()
-            api.short_name(collection)
-            api.temporal(date, date + timedelta(days=1))
-            products[i] = api.hits()
-            logging.info(f"Collection: {collection} Day: {date} # of products in CMR: {products[i]}")
+            products[i] = get_products(collection, date, north_america_flag=False)
+            logging.info(f"Collection: {collection_name} Day: {date} # of products in CMR: {products[i]}")
 
+            if collection in NA_COLLECTIONS:
+                na_products[i] = get_products(collection, date, north_america_flag=True)
+                logging.info(f"North America only Collection: {collection_name} Day: {date} # of products in CMR: {na_products[i]}")
             # Check for month change to toggle the color state
             if date.month != current_month:
                 using_lightened = not using_lightened  # Toggle the state for the new month
@@ -228,7 +271,13 @@ def plot_products(quiet):
             else:
                 color = original_color  # Use the original color without any modification)
 
-            ax.bar(x_values[i], products[i], width=bar_width, color=color)
+            if collection in NA_COLLECTIONS:
+                x_width = 0.4
+                na_color = adjust_saturation(original_color, 60, lighten=False)
+                ax.bar(x_values[i], products[i], width=bar_width, color=color)
+                ax.bar(x_values[i] + x_width, na_products[i], width=bar_width, color=na_color)
+            else:
+                ax.bar(x_values[i], products[i], width=bar_width, color=color)
 
             if inner_progress_bar:
                 inner_progress_bar.update(1)  # Update the inner progress bar
@@ -239,9 +288,12 @@ def plot_products(quiet):
         if outer_progress_bar:
             outer_progress_bar.update(1)
 
-        [samples, mean, std_sigma] = get_statistics(products, collection, debug=True)
+        [samples, mean, std_sigma] = get_statistics(products, collection_name, debug=True)
 
-        ax.legend([LABELS[ic]], loc="upper right", framealpha=0.2)
+        label = [LABELS[ic]]
+        if collection in NA_COLLECTIONS:
+            label.append("North+Central America")
+        ax.legend(label, loc="upper right", framealpha=0.2)
         ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
         ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
         ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
@@ -268,7 +320,10 @@ def plot_products(quiet):
                facecolor=(1.0, 0.75, 0.63, 0.75), edgecolor='black')
 
     plt.tight_layout(pad=2.0)
-    plt.savefig('opera_daily_products_query.png', bbox_inches='tight', dpi=400)
+    png_basename = 'opera_daily_products_query'
+    png_filename = png_basename + ".png"
+
+    plt.savefig(png_filename, bbox_inches='tight', dpi=400)
 #    plt.show()
 
     if args.quiet:
