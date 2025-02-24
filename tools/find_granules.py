@@ -7,7 +7,6 @@ import botocore
 # HLS.S30.T34HCH.2025024T082139.v2.0
 
 RS_BUCKET = 'opera-int-rs-pop1'
-'inputs/HLS_S30/'
 
 
 def get_prefix(granule):
@@ -28,14 +27,6 @@ def get_typical_gran_file(granule):
     given a granule get a typical file of that type
     so we can s3 it
     '''
-    '''
-    if "DSWx-HLS" in granule:
-        return granule + ".log"
-    if "CSLC-S1" in granule or "RTC-S1" in granule:
-        return granule + ".h5"
-    if "DISP-S1" in granule:
-        return granule + ".nc"
-    '''
     if "SLC" in granule:
         return granule + ".zip"
     if "HLS.S30" in granule:
@@ -47,7 +38,6 @@ def check_granule_s3(granule, prefix, bucket="opera-int-rs-pop1"):
     given granule check if in s3
     '''
     s3 = boto3.resource('s3')
-    # gran_s3_path = prefix
     exist_flag = False
 
     gran_file = get_typical_gran_file(granule)
