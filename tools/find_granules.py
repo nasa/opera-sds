@@ -29,8 +29,8 @@ def get_typical_gran_file(granule):
     '''
     if "SLC" in granule:
         return granule + ".zip"
-    if "HLS.S30" in granule:
-        return granule + ".zip"
+    if "HLS.S30" in granule or "HLS.L30" in granule:
+        return granule + "-r1.context.json"
 
 
 def check_granule_s3(granule, prefix, bucket="opera-int-rs-pop1"):
