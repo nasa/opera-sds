@@ -6,4 +6,4 @@ Central repository for OPERA SDS project management
 
 ![OPERA Daily Products](monitoring/opera_daily_products_query.png)
 
-![OPERA Disp S1 hist status](monitoring/opera_disp_s1_hist_status-ops.html)
+[OPERA Disp S1 hist status](monitoring/opera_disp_s1_hist_status-ops.html)
