@@ -10,7 +10,7 @@ import boto3
 import numpy as np
 from tqdm import tqdm
 
-SCRIPT_PATH = os.path.abspath(__file__)
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_args():
@@ -23,11 +23,11 @@ def get_args():
     parser = argparse.ArgumentParser(description="Retrieve opera disp s1 hist status html.")
     parser.add_argument('-b', '--bucket', default="opera-pst-rs-pop1", help='html bucket')
     parser.add_argument('-r', '--region', default="us-west-2", help='s3 region')
-    parser.add_argument('-s', '--s3path', default="s3://opera-pst-rs-pop1/processing_status/DISP_S1/opera_disp_s1_hist_status-ops.html", help='html s3 path')
+    parser.add_argument('-s', '--s3path', default="processing_status/DISP_S1/opera_disp_s1_hist_status-ops.html", help='html s3 path')
     return parser.parse_args()
 
 
-def download_hist_s1_html(bucket="opera-pst-rs-pop1", s3_path="s3://opera-pst-rs-pop1/processing_status/DISP_S1/opera_disp_s1_hist_status-ops.html", aws_region="us-west-2"):
+def download_hist_s1_html(bucket="opera-pst-rs-pop1", s3_path="processing_status/DISP_S1/opera_disp_s1_hist_status-ops.html", aws_region="us-west-2"):
     '''
     download hist s1 html and have the github action put it on the readme
     for the opera sds github page
