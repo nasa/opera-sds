@@ -34,7 +34,8 @@ def download_hist_s1_html(bucket="opera-pst-rs-pop1", s3_path="processing_status
     '''
     html_base = os.path.basename(s3_path)
     html_base = "index.html"
-    html_path = os.path.join(SCRIPT_PATH, html_base)
+    html_dirname = os.path.dirname(SCRIPT_PATH)
+    html_path = os.path.join(html_dirname, html_base)
     print("downloading to this path: ", html_path)
     s3 = boto3.client('s3', region_name=aws_region)
     s3.download_file(bucket, s3_path, html_path)
