@@ -33,6 +33,7 @@ def download_hist_s1_html(bucket="opera-pst-rs-pop1", s3_path="processing_status
     for the opera sds github page
     '''
     html_base = os.path.basename(s3_path)
+    html_base = "index.html"
     html_path = os.path.join(SCRIPT_PATH, html_base)
     print("downloading to this path: ", html_path)
     s3 = boto3.client('s3', region_name=aws_region)
