@@ -113,6 +113,8 @@ def get_statistics(sample_values, collection, sigma_multiplier=2, debug=False):
     """
     # throw out trailing zero samples and the last non-zero partial sample
     sample = remove_trailing_zeros_and_last_entry(sample_values)
+    if not sample:
+        return [sample, 0, [0, 0]]
     if debug:
         check_data_values(sample_values, sample, collection)
     arr = np.array(sample)
@@ -173,7 +175,10 @@ def get_products(collection, date, north_america_flag=False, central_america_fla
 
     api = GranuleQuery()
     api.short_name(collection)
-    api.temporal(date, date + timedelta(days=1))
+    if "DISP" in collection:
+        api.revision_date(date, date + timedelta(days=1))
+    else:
+        api.temporal(date, date + timedelta(days=1))
     if north_america_flag:
         api.polygon(NORTH_AMERICA_POLYGON)
     elif central_america_flag:
@@ -204,12 +209,12 @@ def plot_products(quiet):
     bar_width = 0.5  # fixed bar width
     plot_size = (16 * x_scale, 9 * y_scale)
 
-    COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1",
-                   "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
-    LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
-              "S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)"]
+    COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1", "empty",
+                   "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+    LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)", "empty",
+              "S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
 
-    NA_COLLECTIONS = ["SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
+    NA_COLLECTIONS = ["SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
 
     # Use complementary colors to differential input and output
     COLORS = [
@@ -217,10 +222,12 @@ def plot_products(quiet):
         (0.0, 0.78, 0.55),
         (1.0, 0.22, 0.45),   # Compliment
         (1.0, 0.22, 0.45),
+        (1.0, 0.22, 0.45),
         (0.0, 0.62, 0.95),   # Light Blue
         (1.0, 0.38, 0.05),   # ComplimentI
         (1.0, 0.38, 0.05),
-        (1.0, 0.33, 0.05)
+        (1.0, 0.33, 0.05),
+        (1.0, 0.42, 0.15)
     ]
 
     today = datetime.date.today()
@@ -237,8 +244,14 @@ def plot_products(quiet):
     outer_progress_bar = tqdm(total=len(COLLECTIONS), desc="Overall Progress", leave=True) if quiet else None
 
     # Create subplots: 2 row, 4 plots/row
+    second_row_flag = False
+    total_col = 4
     for ic, collection in enumerate(COLLECTIONS):
-        ax = fig.add_subplot(2, 4, ic + 1)
+        if ic + 1 == 5 and not second_row_flag:
+            second_row_flag = True
+            total_col = 5
+            continue
+        ax = fig.add_subplot(2, total_col, ic + 1)
         products = [0] * NUM_DAYS
         na_products = [0] * NUM_DAYS
         current_month = dates_list[0].month  # Initialize the current month
@@ -295,8 +308,9 @@ def plot_products(quiet):
             label.append("North+Central America")
         ax.legend(label, loc="upper right", framealpha=0.2)
         ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
-        ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
-        ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
+        if "DISP" not in collection:
+            ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
+            ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
 
         check_data_points(samples, std_sigma)
 
@@ -312,6 +326,7 @@ def plot_products(quiet):
 
     # Create custom handles for the global legend
     mean_line = mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle='--', linewidth=1.75, label='Mean')
+
     std_line = mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle=':', linewidth=2.0, label='Mean ± 2 STD')
 
     # Add a global legend for mean and std deviation
