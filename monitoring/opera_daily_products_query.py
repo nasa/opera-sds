@@ -308,8 +308,9 @@ def plot_products(quiet):
             label.append("North+Central America")
         ax.legend(label, loc="upper right", framealpha=0.2)
         ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
-        ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
-        ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
+        if "DISP" not in collection:
+            ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
+            ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
 
         check_data_points(samples, std_sigma)
 
@@ -325,6 +326,7 @@ def plot_products(quiet):
 
     # Create custom handles for the global legend
     mean_line = mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle='--', linewidth=1.75, label='Mean')
+
     std_line = mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle=':', linewidth=2.0, label='Mean ± 2 STD')
 
     # Add a global legend for mean and std deviation
