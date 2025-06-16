@@ -532,6 +532,7 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
         ax.set_xticks(xtick_list)
         ax.set_xlabel(f"Time taken in days")
         ax.set_ylabel("Number of Products")
+        ax.set_ylim(0)
         # label_list = []
         '''
         for title in title_list:
