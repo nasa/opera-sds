@@ -320,6 +320,7 @@ def plot_products(quiet):
         ax.set_xticklabels([d.strftime('%d') for d in odd_days], rotation=45)  # Print odd days without leading zeros
         ax.set_xlabel(f"Day of Month")
         ax.set_ylabel("Number of Products")
+        ax.set_ylim(0)
 
     # adjust plot positions to allow space for statistical legena
     plt.subplots_adjust(left=0.1, bottom=0.12, right=0.9, top=0.9, hspace=0.4, wspace=0.3)
