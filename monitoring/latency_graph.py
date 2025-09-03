@@ -275,7 +275,7 @@ def cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
     return gran_batch_result
 
 
-def parse_input_granules(gran_batch_result, inputgran_output_revision_dict):
+def parse_input_granules(gran_batch_result, inputgran_output_revision_dict, limit=None):
     '''
     oiterate through the cmr results and parse and match results
     '''
@@ -317,6 +317,11 @@ def parse_input_granules(gran_batch_result, inputgran_output_revision_dict):
             for output_revision_date in inputgran_output_revision_dict[gran_id]:
                 # compute latency
                 out_inp_rev, out_inp_temp, inp_rev_inp_temp = compute_granule_latency(output_revision_date, inp_temporal_end, inp_revision_date)
+
+                # ignore values above our limit. this is to ignore outliers
+                if limit:
+                    if out_inp_rev > limit or out_inp_temp > limit or inp_rev_inp_temp > limit:
+                        continue
 
                 if out_inp_rev > tracking_dict["output_inp_revision_diff"]["mode"]:
                     tracking_dict["output_inp_revision_diff"]["mode"] = out_inp_rev
@@ -377,11 +382,13 @@ return time_taken_dict
 '''
 
 
-def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None, stacked=True):
+def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None, stacked=True, ignore_outliers=True):
     '''
     histogram seems like best way to represent the data
     rev_time = revision begin time
     temp_time = temporal begin time
+
+    ignore outliers to get rid of max. stats
     '''
     # today = string_to_datetime("2025-05-09T23:59:59Z")
     print("temp_time", temp_time)
@@ -485,8 +492,9 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
             comp_title_spaces = ""
             mean_title = "Mean =" + comp_title_spaces + " " + str(round(mean, 3))
             mean_title_set.append(mean_title)
-            max_title = "Max =" + comp_title_spaces + " " + str(round(max(times_list), 3))
-            max_title_set.append(max_title)
+            if not ignore_outliers:
+                max_title = "Max =" + comp_title_spaces + " " + str(round(max(times_list), 3))
+                max_title_set.append(max_title)
 
 
         # max_time_list = roundup(max_time_list)
@@ -504,8 +512,9 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
                 ax.hist(time_set[ind], bins=range(max_time_list + 2), alpha=0.25, linewidth=2, edgecolor=color_set[ind], color=color_set[ind], label=title_set[ind])
         for ind in range(len(mean_set)):
             ax.axvline(mean_set[ind], color=color_set[ind], linestyle=':', linewidth=1.75, label=mean_title_set[ind])
-        for ind in range(len(max_set)):
-            ax.axvline(max_set[ind], color=color_set[ind], linestyle='--', linewidth=1.75, label=max_title_set[ind])
+        if not ignore_outliers:
+            for ind in range(len(max_set)):
+                ax.axvline(max_set[ind], color=color_set[ind], linestyle='--', linewidth=1.75, label=max_title_set[ind])
 
 
         # ax.axvline(mean_set, color=color_set, linestyle='--', linewidth=1.75, label=mean_title_set)
@@ -561,7 +570,7 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
     return png_filename
 
 
-def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14):
+def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14, limit_outliers=True):
     '''
     create latency graphs
     TEMPORARILY TESTING 3 DAYS TEMPORAL CHILL
@@ -586,7 +595,15 @@ def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14):
         # prod_type, prod_time_taken_dict = parse_output_granules(output_results)
         #
         input_batch_result_dict = cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
-        prod_time_taken_dict = parse_input_granules(input_batch_result_dict, inputgran_output_revision_dict)
+        # limit outliers
+        limit = None
+        if limit_outliers:
+            if "OPERA_L3_DSWX-HLS" in collection:
+                limit = 10
+            else:
+                limit = 5
+
+        prod_time_taken_dict = parse_input_granules(input_batch_result_dict, inputgran_output_revision_dict, limit=limit)
         time_taken_dict[output_prod_type] = prod_time_taken_dict
 
     with open('time_taken_dict.json', 'w') as fp:
@@ -594,7 +611,7 @@ def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14):
 
     print("temporal_begin:", temporal_begin)
     print("updated_since:", updated_since)
-    png_filename = histogram_plot_latency(time_taken_dict, temporal_begin, updated_since)
+    png_filename = histogram_plot_latency(time_taken_dict, temporal_begin, updated_since, ignore_outliers=True)
     print("My program took", time.time() - START_TIME, "to run")
 
 def main():
