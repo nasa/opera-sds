@@ -14,10 +14,11 @@ body:
       description: Please select a processing venue. NOTE - selecting "OPS" option _will_ publish to NASA DAACs.
       multiple: false
       options:
+        - "Ops-Fwd"
+        - "Ops-Pop1"
+        - "Int-Fwd"
+        - "Int-Pop1"
         - "PST"
-        - "ADT"
-        - "OPS"
-        - "VnV"
     validations:
       required: yes
   - type: dropdown
@@ -32,6 +33,18 @@ body:
         - "CSLC-S1"
         - "DSWx-S1"
         - "DISP-S1"
+        - "TROPO"
+        - "RTC-S1-STATIC"
+        - "CSLC-S1-STATIC"
+        - "DISP-S1-STATIC"
+        - "DSWx-NI"
+        - "DISP-NI"
+        - "DISP-NI-STATIC"
+        - "VLM-S1"
+        - "VLM-NI"
+        - "CSLC-CAL-S1"
+        - "CSLC-NI-S1"
+        - "DSWx-SW"
     validations:
       required: yes
   - type: input
