@@ -209,9 +209,9 @@ def plot_products(quiet):
     bar_width = 0.5  # fixed bar width
     plot_size = (16 * x_scale, 9 * y_scale)
 
-    COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1", "empty",
+    COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1", "OPERA_L4_TROPO-ZENITH_V1",
                    "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
-    LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)", "empty",
+    LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)", "TROPO-ZENITH (output)",
               "S1A (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
 
     NA_COLLECTIONS = ["SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
@@ -222,7 +222,7 @@ def plot_products(quiet):
         (0.0, 0.78, 0.55),
         (1.0, 0.22, 0.45),   # Compliment
         (1.0, 0.22, 0.45),
-        (1.0, 0.22, 0.45),
+        (0.6, 0.12, 0.7),    # Purple for TROPO-ZENITH
         (0.0, 0.62, 0.95),   # Light Blue
         (1.0, 0.38, 0.05),   # ComplimentI
         (1.0, 0.38, 0.05),
@@ -243,14 +243,9 @@ def plot_products(quiet):
     # Use a progress bar if 'quiet' option is set
     outer_progress_bar = tqdm(total=len(COLLECTIONS), desc="Overall Progress", leave=True) if quiet else None
 
-    # Create subplots: 2 row, 4 plots/row
-    second_row_flag = False
-    total_col = 4
+    # Create subplots: 2 rows, 5 plots/row
+    total_col = 5
     for ic, collection in enumerate(COLLECTIONS):
-        if ic + 1 == 5 and not second_row_flag:
-            second_row_flag = True
-            total_col = 5
-            continue
         ax = fig.add_subplot(2, total_col, ic + 1)
         products = [0] * NUM_DAYS
         na_products = [0] * NUM_DAYS
