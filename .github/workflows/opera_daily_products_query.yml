@@ -33,7 +33,7 @@ jobs:
       - name: Commit and Push to Github
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-            file_pattern: 'monitoring/*.png'
+            file_pattern: 'monitoring/*.{png,csv}'
             commit_user_name: 'opera_sds'
             commit_user_email: 'opera-sds@jpl.nasa.gov'
             commit_author: OPERA SDS <opera-sds@jpl.nasa.gov>

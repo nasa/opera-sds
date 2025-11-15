@@ -21,6 +21,7 @@ from cmr import GranuleQuery
 import json
 import statistics
 import math
+import csv
 
 import time
 START_TIME = time.time()
@@ -382,6 +383,56 @@ return time_taken_dict
 '''
 
 
+def export_latency_csv(time_taken_dict, csv_basename='opera_latency_query'):
+    """
+    Exports the latency data to a CSV file.
+
+    Parameters:
+        time_taken_dict (dict): Dictionary containing latency data for each product type.
+        csv_basename (str): Base name for the CSV file.
+    """
+    csv_filename = csv_basename + '.csv'
+    
+    # Mapping for human-readable metric types
+    metric_type_names = {
+        "output_inp_revision_diff": "Output Revision - Input Revision",
+        "output_inp_temporal_diff": "Output Revision - Input Temporal",
+        "inp_revision_inp_temporal_diff": "Input Revision - Input Temporal"
+    }
+    
+    with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Write header
+        header = ['Product_Type', 'Latency_Metric_Type', 'Latency_Value_Days', 'Mean_Days']
+        writer.writerow(header)
+        
+        # Write data for each product type and metric
+        for prod_type, prod_dict in time_taken_dict.items():
+            if not prod_dict:
+                # No data for this product type
+                continue
+                
+            for metric_key, latency_values in prod_dict.items():
+                if not latency_values:
+                    continue
+                    
+                mean = statistics.fmean(latency_values)
+                metric_name = metric_type_names.get(metric_key, metric_key)
+                
+                # Write each individual latency value
+                for latency_value in latency_values:
+                    row = [
+                        prod_type,
+                        metric_name,
+                        latency_value,
+                        mean
+                    ]
+                    writer.writerow(row)
+    
+    print(f'CSV file saved: {csv_filename}')
+
+
 def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None, stacked=True, ignore_outliers=True):
     '''
     histogram seems like best way to represent the data
@@ -608,6 +659,9 @@ def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14, limit_out
 
     with open('time_taken_dict.json', 'w') as fp:
         json.dump(time_taken_dict, fp, indent=2)
+
+    # Export CSV data
+    export_latency_csv(time_taken_dict, csv_basename='opera_latency_query')
 
     print("temporal_begin:", temporal_begin)
     print("updated_since:", updated_since)
