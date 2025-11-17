@@ -175,10 +175,12 @@ def get_products(collection, date, north_america_flag=False, central_america_fla
 
     api = GranuleQuery()
     api.short_name(collection)
+    datetime_start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
+    datetime_end = datetime.datetime(date.year, date.month, date.day, 23, 59, 59)
     if "DISP" in collection:
-        api.revision_date(date, date + timedelta(days=1))
+        api.revision_date(datetime_start, datetime_end)
     else:
-        api.temporal(date, date + timedelta(days=1))
+        api.temporal(datetime_start, datetime_end)
     if north_america_flag:
         api.polygon(NORTH_AMERICA_POLYGON)
     elif central_america_flag:
