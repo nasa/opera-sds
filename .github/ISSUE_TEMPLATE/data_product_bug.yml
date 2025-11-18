@@ -1,0 +1,176 @@
+name: Data Product Bug Report
+description: Report a bug or issue with OPERA data product quality or content
+title: "[Data Bug]: "
+labels: [ "data-bug", "needs-triage" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > _Thanks for reporting a data product issue. Your feedback helps us improve OPERA data quality. Please provide as much detail as possible._
+
+  - type: dropdown
+    id: product-type
+    attributes:
+      label: Product Type
+      description: Which OPERA product type is affected?
+      multiple: false
+      options:
+        - "DIST-HLS (Land Surface Disturbance - Harmonized Landsat Sentinel-2)"
+        - "DIST-S1 (Land Surface Disturbance - Sentinel-1)"
+        - "DSWx-HLS (Dynamic Surface Water Extent - HLS)"
+        - "DSWx-S1 (Dynamic Surface Water Extent - Sentinel-1)"
+        - "DSWx-NI (Dynamic Surface Water Extent - NISAR)"
+        - "DISP-S1 (Land Surface Displacement - Sentinel-1)"
+        - "DISP-NI (Land Surface Displacement - NISAR)"
+        - "RTC-S1 (Radiometric Terrain Corrected - Sentinel-1)"
+        - "CSLC-S1 (Coregistered Single-Look Complex - Sentinel-1)"
+        - "CSLC-NI (Coregistered Single-Look Complex - NISAR)"
+        - "Ancillary Products"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    id: granule-id
+    attributes:
+      label: Granule ID(s)
+      description: Please provide the granule ID(s) or data file name(s) exhibiting the issue
+      placeholder: "e.g., OPERA_L3_DSWX-HLS_T15SXR_20230101T163901Z_..."
+    validations:
+      required: true
+
+  - type: input
+    id: product-version
+    attributes:
+      label: Product Version
+      description: What is the SAS/PGE version of the affected product? (Check product metadata if unknown)
+      placeholder: "e.g., SAS v1.0.2, PGE v2.1.0"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: issue-category
+    attributes:
+      label: Issue Category
+      description: What type of issue are you reporting?
+      multiple: false
+      options:
+        - "Incorrect/anomalous data values"
+        - "Missing data or gaps"
+        - "Geolocation/georeferencing error"
+        - "Metadata error or inconsistency"
+        - "File format or structure issue"
+        - "Cloud masking issue"
+        - "Algorithm artifact or processing error"
+        - "Temporal inconsistency"
+        - "Quality flag issue"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: Describe the issue in detail. What did you observe?
+      placeholder: |
+        Provide a clear description of the problem:
+        - What is wrong with the data?
+        - Where in the product does the issue occur (specific bands, layers, geographic area)?
+        - How did you discover this issue?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to see instead?
+      placeholder: |
+        Describe what the data should look like or what values you expected.
+        Include references to documentation, specifications, or comparison with other data sources if applicable.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact/Severity
+      description: How does this issue affect your science use case?
+      multiple: false
+      options:
+        - "Critical - Makes data unusable for science applications"
+        - "High - Significantly affects data quality or analysis"
+        - "Medium - Noticeable but can work around it"
+        - "Low - Minor issue with minimal impact"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: How can we verify this issue?
+      placeholder: |
+        1. Download granule X
+        2. Open band/layer Y
+        3. Check coordinates/values at location Z
+        4. Observe [specific issue]
+    validations:
+      required: false
+
+  - type: input
+    id: geographic-extent
+    attributes:
+      label: Geographic Location
+      description: Where does the issue occur? (Coordinates, region name, or bounding box)
+      placeholder: "e.g., 34.5°N, 118.2°W or Southern California or Lat: 30-35, Lon: -120 to -115"
+    validations:
+      required: false
+
+  - type: input
+    id: temporal-extent
+    attributes:
+      label: Temporal Information
+      description: When does the issue occur? (Date range, specific acquisition date, or temporal pattern)
+      placeholder: "e.g., 2023-01-15 or January 2023 or All summer 2023 acquisitions"
+    validations:
+      required: false
+
+  - type: textarea
+    id: comparison-data
+    attributes:
+      label: Comparison/Validation Data
+      description: Do you have comparison data that shows the issue? (e.g., ground truth, other satellite products, field observations)
+      placeholder: |
+        Describe any reference data you used to identify the issue:
+        - Source of comparison data
+        - How it differs from OPERA product
+        - Links to external data if publicly available
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that might help diagnose the issue
+      placeholder: |
+        - Screenshots or plots showing the issue
+        - Links to affected data files
+        - Similar issues observed in other granules
+        - Error messages or warnings encountered
+        - Software/tools used to access the data
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: acknowledgment
+    attributes:
+      label: Acknowledgment
+      description: Please confirm the following
+      options:
+        - label: I have checked that this issue hasn't already been reported
+          required: true
+        - label: I have included sufficient information to reproduce/verify the issue
+          required: true
