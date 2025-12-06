@@ -1,3 +1,14 @@
 # Ignore OSX system files
 *.DS_Store
 .idea
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/

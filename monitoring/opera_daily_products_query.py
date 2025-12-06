@@ -1,4 +1,5 @@
 import argparse
+import csv
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.lines as mlines
@@ -7,6 +8,7 @@ from datetime import timedelta
 from time import gmtime, strftime
 import logging
 import json
+import statistics
 
 from cmr import GranuleQuery
 import numpy as np
@@ -188,6 +190,49 @@ def get_products(collection, date, north_america_flag=False, central_america_fla
     return api.hits()
 
 
+def export_csv(dates_list, collections, labels, na_collections, all_products_data, csv_basename='opera_daily_products_query'):
+    """
+    Exports the collected daily products data to a CSV file.
+
+    Parameters:
+    dates_list (list): List of dates for the data period.
+    collections (list): List of collection names.
+    labels (list): List of human-readable labels for collections.
+    na_collections (list): List of collections with North America filtering.
+    all_products_data (dict): Dictionary containing all products data with statistics.
+    csv_basename (str): Base name for the CSV file.
+    """
+    csv_filename = csv_basename + '.csv'
+
+    with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+
+        # Write header
+        header = ['Date', 'Collection', 'Collection_Label', 'Product_Count', 'Regional_Product_Count', 'Mean', 'Lower_2Sigma', 'Upper_2Sigma']
+        writer.writerow(header)
+
+        # Write data for each collection and date
+        for ic, collection in enumerate(collections):
+            data = all_products_data[collection]
+            products = data['products']
+            na_products = data['na_products']
+            mean = data['mean']
+            std_sigma = data['std_sigma']
+
+            for i, date in enumerate(dates_list):
+                row = [
+                    date.strftime('%Y-%m-%d'),
+                    collection,
+                    labels[ic],
+                    products[i],
+                    na_products[i] if collection in na_collections else '',
+                    mean,
+                    std_sigma[0],
+                    std_sigma[1]
+                ]
+                writer.writerow(row)
+
+    logging.info(f'CSV file saved: {csv_filename}')
 
 
 def plot_products(quiet):
@@ -246,6 +291,9 @@ def plot_products(quiet):
     # Use a progress bar if 'quiet' option is set
     outer_progress_bar = tqdm(total=len(COLLECTIONS), desc="Overall Progress", leave=True) if quiet else None
 
+    # Dictionary to collect all products data for CSV export
+    all_products_data = {}
+
     # Create subplots: 3 rows, 4 plots/row
     total_col = 4
     for ic, collection in enumerate(COLLECTIONS):
@@ -301,6 +349,14 @@ def plot_products(quiet):
 
         [samples, mean, std_sigma] = get_statistics(products, collection_name, debug=True)
 
+        # Store data for CSV export
+        all_products_data[collection] = {
+            'products': products,
+            'na_products': na_products,
+            'mean': mean,
+            'std_sigma': std_sigma
+        }
+
         label = [LABELS[ic]]
         if collection in NA_COLLECTIONS:
             label.append("North+Central America")
@@ -339,6 +395,9 @@ def plot_products(quiet):
 
     plt.savefig(png_filename, bbox_inches='tight', dpi=400)
 #    plt.show()
+
+    # Export data to CSV
+    export_csv(dates_list, COLLECTIONS, LABELS, NA_COLLECTIONS, all_products_data, csv_basename=png_basename)
 
     if args.quiet:
         outer_progress_bar.close()
