@@ -86,7 +86,7 @@ def normalize_to_datetime(value):
     # Case 2: A date object (but not datetime)
     elif isinstance(value, datetime.date):
         ret_value = datetime.datetime.combine(value, datetime.time.min)
-        
+
     # Case 3: A string
     elif isinstance(value, str):
         try:
@@ -152,7 +152,7 @@ def remove_landsat9_granules(hls_granules):
     """
 
     filtered_hls_granules = [x for x in hls_granules if x['umm']['Platforms'][0]['ShortName'] != "LANDSAT-9"]
-    
+
     return filtered_hls_granules
 
 
@@ -220,8 +220,8 @@ def query_cmr_for_products(collection,
 
     #if (sensor_datetime_from is None and sensor_datetime_to is None) or (revision_datetime_from is None and revision_datetime_to is None):
     #    raise ValueError("Must provide either sensor or revision datetimes")
-    
-    
+
+
     api = GranuleQuery()
 
     api.format("umm_json")
@@ -246,7 +246,7 @@ def query_cmr_for_products(collection,
                                                  59,
                                                  59,
                                                  )
-    
+
     if (revision_datetime_from is not None) and (revision_datetime_to is not None):
         api.revision_date(date_from=normalize_to_datetime(revision_datetime_from),
                           date_to=normalize_to_datetime(revision_datetime_to),
@@ -257,7 +257,7 @@ def query_cmr_for_products(collection,
                      )
 
 
-        
+
     if north_america_flag:
         api.polygon(NORTH_AMERICA_POLYGON)
     elif central_america_flag:
@@ -268,7 +268,7 @@ def query_cmr_for_products(collection,
     #else:
     results = api.get_all()
 
-    granules = []    
+    granules = []
     # output_results is split in batches of 2000 results
     for batch in results:
         # batch is a string using umm_json format so str to dict
@@ -282,7 +282,7 @@ def query_cmr_for_products(collection,
     # the function call makes it work as intended.
     if remove_landsat9:
         granules = remove_landsat9_granules(granules)
-            
+
     return granules
 
 
@@ -326,7 +326,7 @@ def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results):
     # Make a single dictionary, with HLS granule IDs as the keys, and the associated metadata from CMR as the values.
     # This will be useful in the list comprehensions below.
     hls_results_dict = {x['meta']['native-id'] : x for x in hlsl30_results+hlss30_results}
-    
+
     dswx_mappings = {}
 
     dswx_mappings['DSWx_ID'] = [x['meta']['native-id'] for x in dswx_hls_results]
@@ -340,11 +340,18 @@ def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results):
 
     prods, inds, counts = np.unique(dswx_mappings['InputProduct'], return_index=True, return_counts=True)
     hls_counts_dict = { p : {'index': i, 'count': c} for p,i,c in zip(prods, inds, counts)}
-    
+
     dswx_mappings['DSWx_Granule_Count'] = [ hls_counts_dict[x]['count'] for x in dswx_mappings['InputProduct']]
 
-    
+    # calculate some columns that will be useful for later analysis
+    dswx_mappings['DSWx_ProductionDateTime'] = [extract_production_datetime_from_dswx_hls_id(x) for x in dswx_mappings['DSWx_ID']]
+    dswx_mappings['DSWx_ID_no_pdt'] = [remove_production_datetime_from_granule_id(x) for x in dswx_mappings['DSWx_ID']]
+
+
     dswx_mappings_df = pd.DataFrame(dswx_mappings)
+
+    # sort by granule ID to regularize the output
+    dswx_mappings_df.sort_values(by="DSWx_ID")
 
     return dswx_mappings_df
 
@@ -376,7 +383,7 @@ def process_dswx_by_sensing_date(date_from, date_to=None):
 
     if date_to is None:
         date_to = normalize_to_datetime(date_from) + datetime.timedelta(days=1)
-    
+
     dswx_results = query_cmr_for_products("OPERA_L3_DSWX-HLS_V1",
                                           sensor_datetime_from=date_from,
                                           sensor_datetime_to=date_to,
@@ -429,7 +436,7 @@ def get_dates_between(start, end):
 
 
 
-def process_dswx_by_sensing_date_range(date_from, date_to):
+def process_dswx_by_sensing_date_range(date_from, date_to, verbose=True):
     """
     Process DSWx-HLS mappings for a multi-day sensing-date range.
 
@@ -460,10 +467,87 @@ def process_dswx_by_sensing_date_range(date_from, date_to):
     """
 
     dates_list = get_dates_between(date_from, date_to)
+    if verbose:
+        print(dates_list)
 
     for date in dates_list:
+        if verbose:
+            print('starting on', date)
         df = process_dswx_by_sensing_date(date)
 
+        # TODO:  make these data frames add onto each other.  Currently this will just return the last day in the range
+        # TODO:  alternately, I could have the code write out the dataframe for each day
+
+        fname = 'dswx_dupes_'+f"{date.year:04d}"f"{date.month:02d}"+f"{date.day:02d}"+'.csv'
+        if verbose:
+            print("printing:", fname)
+        df.to_csv(fname)
+        if verbose:
+            print("finished with:", fname)
         pass
 
-    return df
+    return
+
+
+def extract_production_datetime(granule_id):
+    """
+    Takes an OPERA granule ID granule ID and returns the production datetime.
+    The function will parse the granule ID to figure out the product type, then extract the
+    production datetime from the granule ID.
+
+    DSWx-HLS Granule ID example:
+    OPERA_L3_DSWx-HLS_T56MQV_20251107T000729Z_20251113T173736Z_S2B_30_v1.1
+
+    DSWx-HLS Granule ID format:
+    OPERA_L3_DSWx-HLS_T{MGRSTileID}_{SensorDateTime}_{ProductionDateTime}_{satellite}_{pixelSpacing}_{productVersion}
+    """
+
+    # split on underscores, then pick the 3rd string
+    prod_type = granule_id.split("_")[2]
+
+    prod_dt = None
+    if prod_type == "DSWx-HLS":
+        prod_dt = granule_id.split("_")[5]
+
+    return normalize_to_datetime(prod_dt)
+
+
+def remove_production_datetime_from_granule_id(granule_id):
+    """
+    strips out the production datetime and returns the resulting string.
+    Currently this only works on a DSWx-HLS granule ID.
+    """
+    # split on underscores, then pick the 3rd string
+    prod_type = granule_id.split("_")[2]
+
+    granule_id_no_pdt = None
+    if prod_type == "DSWx-HLS":
+        granule_id_no_pdt = granule_id[:42] + granule_id[58:]
+
+    return granule_id_no_pdt
+
+
+
+def calculate_prod_time_deltas(df):
+    """
+    Will calculate and return an array of the production time deltas between OPERA product revisions.
+    """
+    dswx_ids_no_pdt = [remove_production_datetime_from_granule_id(x) for x in df['DSWx_ID']]
+    dswx_ids_no_pdt_unique = np.unique(dswx_ids_no_pdt)
+
+    # get the size for the return array
+    #ret_len = np.unique(df[ df['DSWx_Granule_Count'] > 1 ]['DSWx_ID_no_pdt']).shape[0]
+
+    delta_times = []
+
+    for id in dswx_ids_no_pdt_unique:
+        rows = df[np.array(dswx_ids_no_pdt) == id]
+
+        # we can skip when there's just one row, since there's no delta to calculate
+        if len(rows) > 1:
+            diffs = np.diff(rows['DSWx_ProductionDateTime'])
+            delta_times.extend(list(diffs))
+            pass
+        pass
+
+    return delta_times
