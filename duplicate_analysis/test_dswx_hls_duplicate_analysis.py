@@ -309,18 +309,21 @@ def _make_fake_dswx_granule(dswx_id, rev_date, input_product_native_id):
 def test_map_inputs_to_output_basic():
     # HLS inputs
     hlsl30_results = [
-        _make_fake_hls_granule("HLS_1", "10", "2025-01-01T00:00:00Z", "LANDSAT-8"),
-        _make_fake_hls_granule("HLS_2", "11", "2025-01-02T00:00:00Z", "LANDSAT-8"),
+        _make_fake_hls_granule("HLS.L30.T56MKC.2025305T001219.v2.0", "1", "2025-11-05T10:42:12.789Z", "LANDSAT-8"),
+        _make_fake_hls_granule("HLS.L30.T53LPG.2025305T010432.v2.0", "1", "2025-11-05T06:59:13.797Z", "LANDSAT-9"),
     ]
     hlss30_results = [
-        _make_fake_hls_granule("HLS_3", "12", "2025-01-03T00:00:00Z", "SENTINEL-2A"),
+        _make_fake_hls_granule("HLS.S30.T56KMV.2025305T000321.v2.0", "1", "2025-11-05T11:34:15.302Z", "Sentinel-2A"),
+        _make_fake_hls_granule("HLS.S30.T55MGU.2025305T003721.v2.0", "1", "2025-11-05T11:40:13.299Z", "Sentinel-2C"),
     ]
 
     # DSWx products referencing HLS inputs
     dswx_hls_results = [
-        _make_fake_dswx_granule("DSWX_A", "2025-02-01T00:00:00Z", "HLS_1"),
-        _make_fake_dswx_granule("DSWX_B", "2025-02-02T00:00:00Z", "HLS_1"),
-        _make_fake_dswx_granule("DSWX_C", "2025-02-03T00:00:00Z", "HLS_2"),
+        _make_fake_dswx_granule("OPERA_L3_DSWx-HLS_T56MKC_20251101T001219Z_20251105T162241Z_L8_30_v1.0", "2025-11-05T16:26:24.752Z", "HLS.L30.T56MKC.2025305T001219.v2.0"),
+        _make_fake_dswx_granule("OPERA_L3_DSWx-HLS_T53LPG_20251101T010432Z_20251203T191920Z_L9_30_v1.1", "2025-12-03T20:24:24.458Z", "HLS.L30.T53LPG.2025305T010432.v2.0"),
+
+        _make_fake_dswx_granule("OPERA_L3_DSWx-HLS_T56KMV_20251101T000321Z_20251105T165434Z_S2A_30_v1.0", "2025-11-05T16:58:25.040Z", "HLS.S30.T56KMV.2025305T000321.v2.0"),
+        _make_fake_dswx_granule("OPERA_L3_DSWx-HLS_T55MGU_20251101T003721Z_20251105T165413Z_S2C_30_v1.0", "2025-11-05T16:57:25.836Z", "HLS.S30.T55MGU.2025305T003721.v2.0"),
     ]
 
     df = mod.map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results)
@@ -342,8 +345,10 @@ def test_map_inputs_to_output_basic():
     for input_prod, count in zip(df["InputProduct"], df["DSWx_Granule_Count"]):
         counts_by_input.setdefault(input_prod, count)
 
-    assert counts_by_input["HLS_1"] == 2
-    assert counts_by_input["HLS_2"] == 1
+    assert counts_by_input["HLS.L30.T56MKC.2025305T001219.v2.0"] == 1
+    assert counts_by_input["HLS.L30.T53LPG.2025305T010432.v2.0"] == 1
+    assert counts_by_input["HLS.S30.T56KMV.2025305T000321.v2.0"] == 1
+    assert counts_by_input["HLS.S30.T55MGU.2025305T003721.v2.0"] == 1
 
 
 def test_map_inputs_to_output_handles_empty_inputs():
