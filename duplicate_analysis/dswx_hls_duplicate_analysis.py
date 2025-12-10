@@ -344,7 +344,7 @@ def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results):
     dswx_mappings['DSWx_Granule_Count'] = [ hls_counts_dict[x]['count'] for x in dswx_mappings['InputProduct']]
 
     # calculate some columns that will be useful for later analysis
-    dswx_mappings['DSWx_ProductionDateTime'] = [extract_production_datetime_from_dswx_hls_id(x) for x in dswx_mappings['DSWx_ID']]
+    dswx_mappings['DSWx_ProductionDateTime'] = [extract_production_datetime(x) for x in dswx_mappings['DSWx_ID']]
     dswx_mappings['DSWx_ID_no_pdt'] = [remove_production_datetime_from_granule_id(x) for x in dswx_mappings['DSWx_ID']]
 
 
