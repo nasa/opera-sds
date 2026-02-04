@@ -1,14 +1,17 @@
 
 import asyncio
 from collections import defaultdict
+import copy
 import datetime
 from dateutil.relativedelta import relativedelta
 import functools
+import inspect
 import json
 import logging
 import logging.handlers
 import math
 import os
+import os.path as osp
 import re
 import statistics
 import sys
@@ -23,6 +26,7 @@ import matplotlib.colors as mcolors
 import matplotlib.lines as mlines
 import numpy as np
 import pandas as pd
+import requests
 from tqdm import tqdm
 
 
@@ -51,6 +55,47 @@ CENTRAL_AMERICA_POLYGON = [[-114.64453, 32.79634], [-117.35156, 32.62063], [-118
                            [-103.28906, 29.59414], [-104.37891, 29.94556], [-105.22266, 31.63237],
                            [-108.94922, 32.01893], [-110.91797, 31.59868], [-114.64453, 32.79634]]
 
+HLS_PATTERN = re.compile(r'(?P<id>(?P<product_shortname>HLS[.](?P<source>[SL])30)[.](?P<tile_id>T[^\W_]{5})[.]'
+                         r'(?P<acquisition_ts>\d{7}T\d{6})[.](?P<collection_version>v\d+[.]\d+))')
+HLS_SUFFIX = re.compile(r'[.](B[A-Za-z0-9]{2}|Fmask)[.]tif$')
+
+
+def process_arg(arg_name, process_func):
+    """
+    A decorator to apply a function to a specific argument by name,
+    whether it is passed as a positional or keyword argument.
+    """
+    def decorator(func):
+        # Get the argument specification of the decorated function
+        sig = inspect.signature(func)
+        # Get parameter names
+        param_names = list(sig.parameters.keys())
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+
+            # Convert args to a mutable list
+            mutable_args = list(args)
+
+            # --- 1. Check in kwargs ---
+            if arg_name in kwargs:
+                kwargs[arg_name] = process_func(kwargs[arg_name])
+
+            # --- 2. Check in args (positional) ---
+            # Determine the index of the argument name
+            elif arg_name in param_names:
+                arg_index = param_names.index(arg_name)
+                # Ensure the index is within the bounds of args
+                if arg_index < len(mutable_args):
+                    mutable_args[arg_index] = process_func(mutable_args[arg_index])
+                # If it's a required argument not in args or kwargs, let Python handle the TypeError later
+                # when calling the function.
+
+            # Call the original function with potentially modified args and kwargs
+            return func(*mutable_args, **kwargs)
+
+        return wrapper
+    return decorator
 
 
 def normalize_to_datetime(value):
@@ -95,11 +140,13 @@ def normalize_to_datetime(value):
         except ValueError:
             raise ValueError(f"String '{value}' is not a valid ISO-8601 datetime/date")
 
+    # Case 4: None is passed in
+    elif value is None:
+        ret_value = value
     else:
         raise ValueError(f"Unsupported type: {type(value)}")
 
     return ret_value
-
 
 
 def remove_landsat9_granules_error(hls_granules):
@@ -156,6 +203,10 @@ def remove_landsat9_granules(hls_granules):
     return filtered_hls_granules
 
 
+@process_arg('sensor_datetime_from', normalize_to_datetime)
+@process_arg('sensor_datetime_to', normalize_to_datetime)
+@process_arg('revision_datetime_from', normalize_to_datetime)
+@process_arg('revision_datetime_to', normalize_to_datetime)
 def query_cmr_for_products(collection,
                            sensor_datetime_from=None,
                            sensor_datetime_to=None,
@@ -221,15 +272,6 @@ def query_cmr_for_products(collection,
     #if (sensor_datetime_from is None and sensor_datetime_to is None) or (revision_datetime_from is None and revision_datetime_to is None):
     #    raise ValueError("Must provide either sensor or revision datetimes")
 
-
-    api = GranuleQuery()
-
-    api.format("umm_json")
-
-    api.short_name(collection)
-    #datetime_start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
-    #datetime_end = datetime.datetime(date.year, date.month, date.day, 23, 59, 59)
-
     if sensor_datetime_from is not None and sensor_datetime_to is None:
         sensor_datetime_to = datetime.datetime(sensor_datetime_from.year,
                                                sensor_datetime_from.month,
@@ -247,6 +289,15 @@ def query_cmr_for_products(collection,
                                                  59,
                                                  )
 
+
+    #print(sensor_datetime_from, sensor_datetime_to)
+
+    api = GranuleQuery()
+    api.format("umm_json")
+    api.short_name(collection)
+
+    #api.params['page_size'] = 2000
+
     if (revision_datetime_from is not None) and (revision_datetime_to is not None):
         api.revision_date(date_from=normalize_to_datetime(revision_datetime_from),
                           date_to=normalize_to_datetime(revision_datetime_to),
@@ -256,8 +307,6 @@ def query_cmr_for_products(collection,
                      date_to=normalize_to_datetime(sensor_datetime_to),
                      )
 
-
-
     if north_america_flag:
         api.polygon(NORTH_AMERICA_POLYGON)
     elif central_america_flag:
@@ -266,29 +315,71 @@ def query_cmr_for_products(collection,
     #if counts_only:
     #    results = api.hits()
     #else:
-    results = api.get_all()
+    #results = api.get_all()
 
-    granules = []
+    # Manual Search-After Loop
+    query_params = dict(api.params)
+    query_params['page_size'] = 2000
+    query_params["sort_key[]"] = ["provider", "start_date", "producer_granule_id"]
+    search_url = "https://cmr.earthdata.nasa.gov/search/granules.umm_json"
+
+    results = []
+    search_after = None
+
+    while True:
+        headers = {'Accept': 'application/vnd.nasa.cmr.umm_json+json'}
+        if search_after:
+            headers['CMR-Search-After'] = search_after
+
+        response = requests.get(search_url, params=query_params, headers=headers)
+        response.raise_for_status()
+
+        data = response.json().get('items', [])
+        if not data:
+            break
+
+        results.extend(data)
+        search_after = response.headers.get('CMR-Search-After')
+
+        if not search_after:
+            break
+
+    #breakpoint()
+    #granules = []
     # output_results is split in batches of 2000 results
-    for batch in results:
-        # batch is a string using umm_json format so str to dict
-        granules.extend(json.loads(batch)["items"]) # this is a list of granules
+    #for batch in results:
+    #    # batch is a string using umm_json format so str to dict
+    #    granules.extend(json.loads(batch)["items"]) # this is a list of granules
+    #     pass
 
-        pass
     # now we have a list of all the granules with their associated metadata
+    granules = copy.deepcopy(results)
 
     # This isn't working currently... Landsat-9 is not getting filtered out, I believe due to the
     # reassignment of `granules` here.  Skipping the reassignment and just putting `return` before
     # the function call makes it work as intended.
     if remove_landsat9:
+        print('here')
         granules = remove_landsat9_granules(granules)
+
+    print(f"{sensor_datetime_from:%Y-%m-%d}: {len(granules)} granules for Collection {collection}")
 
     return granules
 
 
+def get_hls_granule_from_dswx_input_list(dswx_input_list):
+
+    for i in dswx_input_list:
+        stripped = re.sub(HLS_SUFFIX, '', i)
+        tmp = HLS_PATTERN.match(stripped.split('/')[-1])
+        if tmp is not None:
+            break
+
+    return tmp[0]
 
 
-def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results):
+
+def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results, verbose=False):
     """
     Build a mapping between DSWx-HLS output granules and their input HLS granules.
 
@@ -333,10 +424,16 @@ def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results):
     dswx_mappings['DSWx_RevDate'] = [x['meta']['revision-date'] for x in dswx_hls_results]
 
     # This line is brittle - the index `2` is a magic number here, for the attribute with the input granule.
-    dswx_mappings['InputProduct'] = [x['umm']['AdditionalAttributes'][2]['Values'][0] for x in dswx_hls_results]
-    dswx_mappings['InputRevId'] = [hls_results_dict[x]['meta']['revision-id'] for x in dswx_mappings['InputProduct']]
-    dswx_mappings['InputRevDate'] = [hls_results_dict[x]['meta']['revision-date'] for x in dswx_mappings['InputProduct']]
-    dswx_mappings['InputPlatform'] = [hls_results_dict[x]['umm']['Platforms'][0]['ShortName'] for x in dswx_mappings['InputProduct']]
+    #dswx_mappings['InputProduct'] = [x['umm']['AdditionalAttributes'][2]['Values'][0] for x in dswx_hls_results]
+    dswx_mappings['InputProduct'] = [get_hls_granule_from_dswx_input_list(x['umm']['InputGranules']) for x in dswx_hls_results]
+
+    # if-statement inside the list comprehension will flag when HLS input granules are missing
+    #dswx_mappings['InputRevId'] = [hls_results_dict[x]['meta']['revision-id'] for x in dswx_mappings['InputProduct']]
+    #dswx_mappings['InputRevDate'] = [hls_results_dict[x]['meta']['revision-date'] for x in dswx_mappings['InputProduct']]
+    #dswx_mappings['InputPlatform'] = [hls_results_dict[x]['umm']['Platforms'][0]['ShortName'] for x in dswx_mappings['InputProduct']]
+    dswx_mappings['InputRevId'] = [hls_results_dict[x]['meta']['revision-id'] if x in hls_results_dict else None for x in dswx_mappings['InputProduct']]
+    dswx_mappings['InputRevDate'] = [hls_results_dict[x]['meta']['revision-date'] if x in hls_results_dict else None for x in dswx_mappings['InputProduct']]
+    dswx_mappings['InputPlatform'] = [hls_results_dict[x]['umm']['Platforms'][0]['ShortName'] if x in hls_results_dict else None for x in dswx_mappings['InputProduct']]
 
     prods, inds, counts = np.unique(dswx_mappings['InputProduct'], return_index=True, return_counts=True)
     hls_counts_dict = { p : {'index': i, 'count': c} for p,i,c in zip(prods, inds, counts)}
@@ -353,9 +450,47 @@ def map_inputs_to_output(dswx_hls_results, hlsl30_results, hlss30_results):
     # sort by granule ID to regularize the output
     dswx_mappings_df.sort_values(by="DSWx_ID")
 
-    return dswx_mappings_df
+    # Now compile the list of HLS Orphans - HLS products with no DSWx-HLS
+    hls_orphans = list(set(hls_results_dict.keys()) - set(dswx_mappings_df['InputProduct']))
+
+    if len(hls_orphans) > 0:
+        hls_orphans_df = pd.DataFrame( { 'HLS_GranuleId': hls_orphans,
+                                         'HLS_RevId': [hls_results_dict[x]['meta']['revision-id'] for x in hls_orphans],
+                                         'HLS_RevDate': [hls_results_dict[x]['meta']['revision-date'] for x in hls_orphans],
+                                         'HLS_Platform': [hls_results_dict[x]['umm']['Platforms'][0]['ShortName'] for x in hls_orphans],
+                                        }
+                                      )
+    else:
+        # This is kludgey - hard-coding these column names twice, to avoid an error when there are no hls orphans to return.
+        hls_orphans_df = pd.DataFrame(columns=['HLS_GranuleId', 'HLS_RevId', 'HLS_RevDate', 'HLS_Platform'])
+
+    # Now compile the list of HLS granule IDs that are missing.
+    # These are HLS Granule IDs present in the DSWx-HLS product metadata, but do not show up in the query results.
+    missing_hls_ids = [ x for x in dswx_mappings['InputProduct'] if x not in hls_results_dict ]
+
+    print_str = f"Missing {len(missing_hls_ids)} HLS input granules from DAAC query results"
+    #if missing_hls_ids and verbose:
+    if verbose:
+        print_str = print_str + f":  {missing_hls_ids}"
+    print(print_str)
+
+    return dswx_mappings_df, hls_orphans_df, missing_hls_ids
 
 
+def find_orphaned_inputs(dswx_hls_results, hlsl30_results, hlss30_results):
+
+    # Make a single dictionary, with HLS granule IDs as the keys, and the associated metadata from CMR as the values.
+    # This will be useful in the list comprehensions below.
+    hls_results_dict = {x['meta']['native-id'] : x for x in hlsl30_results+hlss30_results}
+
+    dswx_results_dict =  {x['meta']['native-id'] : x for x in dswx_hls_results}
+
+    return
+
+
+
+@process_arg('date_from', normalize_to_datetime)
+@process_arg('date_to', normalize_to_datetime)
 def process_dswx_by_sensing_date(date_from, date_to=None):
     """
     Query DSWx-HLS and HLS input collections for a single sensing-date window.
@@ -398,12 +533,14 @@ def process_dswx_by_sensing_date(date_from, date_to=None):
                                             sensor_datetime_to=date_to,
                                             )
 
-    date_df = map_inputs_to_output(dswx_results, hlsl30_results, hlss30_results)
+    date_df, hls_orphans_df, missing_hls_ids = map_inputs_to_output(dswx_results, hlsl30_results, hlss30_results)
 
-    return date_df
+    return date_df, hls_orphans_df, missing_hls_ids
 
 
 
+@process_arg('start', normalize_to_datetime)
+@process_arg('end', normalize_to_datetime)
 def get_dates_between(start, end):
     """
     Generate a list of daily timestamps between two dates, inclusive.
@@ -436,7 +573,9 @@ def get_dates_between(start, end):
 
 
 
-def process_dswx_by_sensing_date_range(date_from, date_to, verbose=True):
+@process_arg('date_from', normalize_to_datetime)
+@process_arg('date_to', normalize_to_datetime)
+def process_dswx_by_sensing_date_range(date_from, date_to, output_dir='.', verbose=True, resume=False):
     """
     Process DSWx-HLS mappings for a multi-day sensing-date range.
 
@@ -468,22 +607,42 @@ def process_dswx_by_sensing_date_range(date_from, date_to, verbose=True):
 
     dates_list = get_dates_between(date_from, date_to)
     if verbose:
-        print(dates_list)
+        print( "Dates to process:", [f"{date_obj:%Y-%m-%d}" for date_obj in dates_list] )
 
     for date in dates_list:
-        if verbose:
-            print('starting on', date)
-        df = process_dswx_by_sensing_date(date)
+        dupes_fname = f"dswx_dupes_{date.year:04d}-{date.month:02d}-{date.day:02d}.csv"
+        orphan_fname = f"hls_orphans_{date.year:04d}-{date.month:02d}-{date.day:02d}.csv"
+        missing_fname = f"missing_hls_ids_{date.year:04d}-{date.month:02d}-{date.day:02d}.txt"
 
-        # TODO:  make these data frames add onto each other.  Currently this will just return the last day in the range
-        # TODO:  alternately, I could have the code write out the dataframe for each day
+        if resume:
+            if os.path.isfile( osp.join(output_dir, dupes_fname) ):
+                print(f"skipping {date:%Y-%m-%d} since the output already exists ({osp.join(output_dir, dupes_fname)})")
+                continue
+        try:
+            if verbose:
+                print(f"starting on {date:%Y-%m-%d}")
+            df, orphans, missing_hls_ids = process_dswx_by_sensing_date(date)
 
-        fname = 'dswx_dupes_'+f"{date.year:04d}"f"{date.month:02d}"+f"{date.day:02d}"+'.csv'
-        if verbose:
-            print("printing:", fname)
-        df.to_csv(fname)
-        if verbose:
-            print("finished with:", fname)
+            # TODO:  make these data frames add onto each other.  Currently this will just return the last day in the range
+            # TODO:  alternately, I could have the code write out the dataframe for each day
+
+            if verbose:
+                print("writing:", dupes_fname)
+            df.to_csv(osp.join(output_dir, dupes_fname))
+
+            if verbose:
+                print("writing:", orphan_fname)
+            orphans.to_csv(osp.join(output_dir, orphan_fname))
+
+            if verbose:
+                print("writing:", missing_fname)
+            # missing_hls_ids is just a list of strings
+            with open(osp.join(output_dir, missing_fname), "w") as file:
+                # Join all elements with a newline as a separator
+                file.write("\n".join(missing_hls_ids))
+
+        except Exception as e:
+            print(f"error processing date: {date} with the following Exception: {e}")
         pass
 
     return
@@ -541,13 +700,129 @@ def calculate_prod_time_deltas(df):
     delta_times = []
 
     for id in dswx_ids_no_pdt_unique:
-        rows = df[np.array(dswx_ids_no_pdt) == id]
+        # do a copy here, because later we may need to convert the datetimes, and I don't want this
+        #to propagate back to the original dataframe.
+        rows = df[np.array(dswx_ids_no_pdt) == id].copy()
 
         # we can skip when there's just one row, since there's no delta to calculate
         if len(rows) > 1:
+            rows['DSWx_ProductionDateTime'] = rows['DSWx_ProductionDateTime'].map(normalize_to_datetime)
             diffs = np.diff(rows['DSWx_ProductionDateTime'])
             delta_times.extend(list(diffs))
             pass
         pass
 
     return delta_times
+
+
+def load_riley_json(input_dict):
+    '''
+    pre-requisite:
+    with open ('./jan-oct 1.json') as f: dupes_jan_oct = json.load(f)
+
+    resulting dict has three fields:  summary, counts_by_date, hls_to_dswx_mappings_by_date
+
+    '''
+
+    dupes_counts = []
+    for key, metrics in input_dict.items():
+        date_str, doy_str = key.split(" / ")
+        dupes_counts.append({"date": pd.to_datetime(date_str),
+                             "doy": int(doy_str.split("-")[1]),
+                             **metrics
+                             })
+    dupes_counts_df = pd.DataFrame(dupes_counts).set_index("doy").sort_index()
+
+    return
+
+
+@process_arg('compare_date', normalize_to_datetime)
+def compare_against_riley_results(compare_date, riley_results, my_results_dir):
+    '''
+    Run this in iPython with the following command:
+    for i in np.arange(1, 32, 1):
+        print(f'2025-01-{i:02d}: ', dswx.compare_against_riley_results(f'2025-01-{i:02d}', {filepath to Riley's Results}, {filepath to my data dir}))
+    '''
+    ret_value = True
+
+    #with open ('./jan-oct 1.json') as f:
+    #    riley_dupes = json.load(f)
+    with open (riley_results) as f:
+        riley_dupes = json.load(f)
+
+    date = normalize_to_datetime(compare_date)
+    dupes_df = pd.read_csv(osp.join(my_results_dir, f'dswx_dupes_{date.year:04d}-{date.month:02d}-{date.day:02d}.csv'))
+
+    compare_date_key = f"{date.year:04d}-{date.month:02d}-{date.day:02d} / {date.year:04d}-{date.strftime('%j')}"
+    riley_dupes_for_date = riley_dupes['hls_to_dswx_mappings_by_date'][compare_date_key]
+
+    # Just pull out the dict entries with non-empty values.  This avoids trying to include orphaned HLS granules.
+    riley_dupes_for_date_nonempty = {k:v for k, v in riley_dupes_for_date.items() if v}
+
+    # first compare Riley's list of HLS IDs with multiple DSWx-HLS products against my list of the same
+    # This says if the set of unique HLS granules are the same.  This should evaluate to true
+    #assert set(riley_dupes_for_date_nonempty.keys()) == set(dupes_df[ dupes_df['DSWx_Granule_Count'] > 1 ]['InputProduct']), f'failed assert for {date}'
+    ret_value = ret_value and ( set(riley_dupes_for_date_nonempty.keys()) == set(dupes_df[ dupes_df['DSWx_Granule_Count'] > 1 ]['InputProduct']) )
+    # if this is true, then we can just loop over one list and we know we will get all HLS IDs in either set.
+    if ret_value:
+        # Now confirm that the exact granule DSWx-HLS names are consistent
+        for k in riley_dupes_for_date_nonempty.keys():
+            dswx_ids_riley = riley_dupes_for_date_nonempty[k]
+            dswx_ids_mine = list(dupes_df[ dupes_df['InputProduct'] == k]['DSWx_ID'])
+
+            #assert sorted(dswx_ids_riley) == sorted(dswx_ids_mine), f'failed assert for {k}'
+            ret_value = ret_value and (sorted(dswx_ids_riley) == sorted(dswx_ids_mine))
+
+    #return True
+    return ret_value
+
+
+@process_arg('date_from', normalize_to_datetime)
+@process_arg('date_to', normalize_to_datetime)
+def compare_against_riley_results_by_sensing_date_range(date_from, date_to, riley_results, my_results_dir='.'):
+    print(date_from, date_to)
+    dates_list = get_dates_between(date_from, date_to)
+
+    ans_for_all_dates = True
+    for date in dates_list:
+        ans = compare_against_riley_results(date, riley_results, my_results_dir)
+        print(f"{date.year:04d}-{date.month:02d}-{date.day:02d}: {ans}")
+        ans_for_all_dates = ans_for_all_dates and ans
+
+
+    print(f"Answer for all dates: {ans_for_all_dates}")
+
+    return
+
+
+if __name__ == '__main__':
+    # this is just a holding bin for code I'm using in iPython.  Delete it before committing to the repo.
+
+    df = pd.read_csv(all_files[0])
+
+    np.histogram(df['DSWx_Granule_Count'])
+
+
+    df.iloc[ list(np.unique(df['InputProduct'], return_index=True)[1]) ]
+    np.histogram(merged_df_hls_unique['InputRevId'])
+
+    np.histogram(merged_df.iloc[ list(np.unique(merged_df['InputProduct'], return_index=True)[1]) ]['InputRevId'])
+
+
+    prod_time_deltas = []
+    prod_time_deltas_sec = []
+    for d, f in zip(dfs, all_files):
+        print(f)
+        delta_times = dswx.calculate_prod_time_deltas(d)
+        delta_seconds = [x.total_seconds() for x in delta_times]
+        prod_time_deltas.append(delta_times.copy())
+        prod_time_deltas_sec.extend(delta_seconds.copy())
+        delta_days = [x/60/60/24 for x in delta_seconds]
+        #bins = np.arange(0.5,20.5,1)
+        bins = np.arange(-6,20,1/24)
+        plt.figure()
+        plt.hist(delta_days, bins=bins, log=True);
+        plt.title('Log-Hist of DSWx-HLS Production Datetime Deltas')
+        plt.xlabel('delta days')
+        plt.savefig('Prod_Time_Hist_'+f[18:-4]+'.png')
+        print('fig saved:', 'Prod_Time_Hist_'+f[18:-4]+'.png')
