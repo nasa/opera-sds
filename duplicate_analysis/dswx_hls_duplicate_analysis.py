@@ -17,6 +17,7 @@ import statistics
 import sys
 import time
 from time import gmtime, strftime
+import traceback
 from typing import Union, Iterable
 import urllib.parse
 
@@ -643,6 +644,7 @@ def process_dswx_by_sensing_date_range(date_from, date_to, output_dir='.', verbo
 
         except Exception as e:
             print(f"error processing date: {date} with the following Exception: {e}")
+            traceback.print_exc()
         pass
 
     return
