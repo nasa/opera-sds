@@ -1,0 +1,7 @@
+# Ignore the pycache from running the scripts
+__pycache__/
+
+# Ignore directories where output data from the scripts get stashed
+data_*/
+graphs/
+lists_of_duplicates_for_removal/
