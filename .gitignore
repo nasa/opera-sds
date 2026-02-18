@@ -1,3 +1,7 @@
 # Ignore OSX system files
 *.DS_Store
 .idea
+
+# Ignore S1 to RTC tool input and output
+tools/s1_to_rtc/*.json
+tools/s1_to_rtc/*.txt
