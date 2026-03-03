@@ -3,5 +3,15 @@ __pycache__/
 
 # Ignore directories where output data from the scripts get stashed
 data_*/
+figures/
 graphs/
 lists_of_duplicates_for_removal/
+
+# Ignore the scratch directory and everything in it
+scratch/
+
+# Ignore all excel files, csv files, and sqlite
+*.xls
+*.xlsx
+*.csv
+*.sqlite
