@@ -17,7 +17,7 @@ import sys
 import urllib.parse
 from collections import defaultdict
 from typing import Union, Iterable
-from cmr import GranuleQuery
+from cmr import GranuleQuery, CMR_UAT
 import json
 import statistics
 import math
@@ -33,14 +33,16 @@ TODAY = datetime.date.today()
 
 COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "empty", "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
 # override to just do one for now
-COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1"]
-# COLLECTIONS = ["OPERA_L2_RTC-S1_V1"]
+COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"]
+
+UAT_COLLECTIONS = {"OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"}
 
 OUT_TO_INP_DICT = {
     "DSWx-HLS": "HLSL30",
     "DSWx-S1": "OPERA_L2_RTC-S1_V1",
     "RTC-S1": "SENTINEL-1A_SLC",
-    "CSLC-S1": "SENTINEL-1A_SLC"
+    "CSLC-S1": "SENTINEL-1A_SLC",
+    "DIST-ALERT-S1": "OPERA_L2_RTC-S1_V1"
 }
 
 def roundup(x):
@@ -350,6 +352,74 @@ def parse_input_granules(gran_batch_result, inputgran_output_revision_dict, limi
 
     return time_taken_dict
 
+def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=None):
+    """
+    Compute latency for DIST-ALERT-S1 from CMR UAT.
+    InputGranules is not populated for this product in CMR UAT,
+    so latency is derived from the product creation timestamp
+    (embedded in the product ID) and the sensing time.
+
+    Only revision_date is used for filtering because DIST-S1
+    reprocesses historical time-series data where sensing dates
+    can be years before the product creation date.
+
+    Metrics mapped to existing framework:
+      output_inp_revision_diff  -> CMR revision - product creation (DAAC delivery)
+      output_inp_temporal_diff  -> CMR revision - sensing time (total latency)
+      inp_revision_inp_temporal_diff -> product creation - sensing time (processing latency)
+    """
+    api = GranuleQuery(mode=CMR_UAT)
+    api.format("umm_json")
+    api.short_name(collection)
+    api.revision_date(updated_since, today)
+    output_results = api.get_all()
+
+    time_taken_dict = {
+        "output_inp_revision_diff": [],
+        "output_inp_temporal_diff": [],
+        "inp_revision_inp_temporal_diff": []
+    }
+
+    for batch in output_results:
+        umm_json_result = json.loads(batch)
+        if umm_json_result.get("hits", 0) == 0:
+            continue
+        for granule in umm_json_result["items"]:
+            native_id = granule["meta"]["native-id"]
+            revision_date = granule["meta"]["revision-date"]
+            umm = granule.get("umm", {})
+            temporal = umm.get("TemporalExtent", {}).get("RangeDateTime", {})
+            sensing_begin = temporal.get("BeginningDateTime", "")
+            if not sensing_begin:
+                continue
+
+            parts = native_id.split("_")
+            if len(parts) < 6:
+                continue
+            creation_ts_str = parts[5]
+
+            try:
+                revision_dt = string_to_datetime(revision_date)
+                sensing_dt = string_to_datetime(sensing_begin)
+                creation_dt = string_to_datetime(creation_ts_str, gran_input="DIST-ALERT-S1")
+            except (ValueError, TypeError):
+                continue
+
+            out_inp_rev = (revision_dt - creation_dt).total_seconds() / (60 * 60 * 24)
+            out_inp_temp = (revision_dt - sensing_dt).total_seconds() / (60 * 60 * 24)
+            inp_rev_inp_temp = (creation_dt - sensing_dt).total_seconds() / (60 * 60 * 24)
+
+            if limit:
+                if out_inp_rev > limit or out_inp_temp > limit or inp_rev_inp_temp > limit:
+                    continue
+
+            time_taken_dict["output_inp_revision_diff"].append(out_inp_rev)
+            time_taken_dict["output_inp_temporal_diff"].append(out_inp_temp)
+            time_taken_dict["inp_revision_inp_temporal_diff"].append(inp_rev_inp_temp)
+
+    return "DIST-ALERT-S1", time_taken_dict
+
+
 '''
 def parse_input_granules(output_to_inp_dict, time_taken_dict={})
     # cmr search for all input granules. and then get metadata
@@ -421,16 +491,15 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
 
     comp_title_order = ["output_inp_revision_diff", "output_inp_temporal_diff", "inp_revision_inp_temporal_diff"]
     color_order = ["r", "g", "b"]
-    x_scale = 1.0  # Adjust to scale the width of the plot area
-    y_scale = 0.9  # Adjust to scale the height of the plot area
-    bar_width = 0.5  # fixed bar width
+    num_products = len(time_taken_dict)
+    c_ind = 2
+    p_ind = (num_products + c_ind - 1) // c_ind
+    x_scale = 1.0
+    y_scale = 0.45 * p_ind
+    bar_width = 0.5
     plot_size = (16 * x_scale, 9 * y_scale)
     fig = plt.figure(figsize=plot_size, dpi=100)
     fig.suptitle(f'OPERA Product Latency\n Sensing time frame: {temp_time} to: {today} Revision time frame : {rev_time} to {today}')
-
-    # project index which will be the row
-    p_ind = 2
-    c_ind = 2
     plot_count = 0
     for prod_type, prod_dict in time_taken_dict.items():
         # comparison type index which will be column
@@ -584,6 +653,15 @@ def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14, limit_out
 
     time_taken_dict = {}
     for collection in COLLECTIONS:
+        if collection in UAT_COLLECTIONS:
+            limit = 5 if limit_outliers else None
+            uat_updated_since = today - timedelta(days=max(revision_delta, 30))
+            output_prod_type, prod_time_taken_dict = compute_dist_s1_latency(
+                collection, temporal_begin, uat_updated_since, limit=limit
+            )
+            time_taken_dict[output_prod_type] = prod_time_taken_dict
+            continue
+
         output_results = get_output_products(collection, temporal_begin, updated_since)
         # print("output_results", output_results)
         if '"hits":0,' in output_results[0]:
