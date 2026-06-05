@@ -38,9 +38,9 @@ COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_
 
 OUT_TO_INP_DICT = {
     "DSWx-HLS": ["HLSL30", "HLSS30"],  # DSWx-HLS uses both Landsat and Sentinel-2 inputs
-    "DSWx-S1": "OPERA_L2_RTC-S1_V1",
-    "RTC-S1": "SENTINEL-1A_SLC",
-    "CSLC-S1": "SENTINEL-1A_SLC"
+    "DSWx-S1": ["OPERA_L2_RTC-S1_V1"],
+    "RTC-S1": ["SENTINEL-1A_SLC"],
+    "CSLC-S1": ["SENTINEL-1A_SLC"]
 }
 
 def roundup(x):
@@ -256,15 +256,8 @@ def cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
     search the input granules and from that parse and match the inputs.
     Supports querying multiple input collections (e.g., HLSL30 and HLSS30 for DSWx-HLS).
     '''
-    # Get collection(s) from the mapping, can be a string or list
-    inp_collections = OUT_TO_INP_DICT[output_prod_type]
-    
-    # Convert to list if it's a single string
-    if isinstance(inp_collections, str):
-        collections_to_query = [inp_collections]
-    else:
-        collections_to_query = inp_collections
-    
+    collections_to_query = OUT_TO_INP_DICT[output_prod_type]
+
     print("input_search begin time: ", cmr_input_begin_time)
     print("input_search end time: ", cmr_input_end_time)
     cmr_input_begin_time = string_to_datetime(cmr_input_begin_time, gran_input=output_prod_type)
