@@ -3,3 +3,4 @@ matplotlib>=3.9.1
 numpy
 tqdm
 boto3
+requests
