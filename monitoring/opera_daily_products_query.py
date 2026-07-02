@@ -263,8 +263,6 @@ def plot_products(quiet):
         c_fig, c_ax = plt.subplots(dpi=100)
         c_ax.set_title(f'# of {collection} Products / Day \nFrom: {dates_list[0]} '
                        f'to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
-        # c_fig.suptitle(f'# of {collection} Products / Day \nFrom: {dates_list[0]} '
-        #                f'to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
 
         ax = fig.add_subplot(3, total_col, ic + 1)
         products = [0] * NUM_DAYS
