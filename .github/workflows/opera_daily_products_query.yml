@@ -30,7 +30,7 @@ jobs:
           python opera_daily_products_query.py
 
       - name: Save Report Artifacts
-        uses: actions/upload-artifacts@v7
+        uses: actions/upload-artifact@v7
         with:
           path: 'monitoring/archive_data'
           retention-days: 30
