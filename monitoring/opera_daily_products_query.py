@@ -7,6 +7,7 @@ from datetime import timedelta
 from time import gmtime, strftime
 import logging
 import json
+import os
 
 from cmr import GranuleQuery
 import numpy as np
@@ -243,12 +244,28 @@ def plot_products(quiet):
     fig = plt.figure(figsize=plot_size, dpi=100)
     fig.suptitle(f'# of Products / Day from: {dates_list[0]} to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
 
+    report = {
+        'data_from': dates_list[0].strftime('%Y-%m-%d %H:%M:%S'),
+        'data_to': dates_list[-1].strftime('%Y-%m-%d %H:%M:%S'),
+        'report_time': now,
+        'products': {}
+    }
+
+    archive_data_dir = 'archive_data'
+    os.makedirs(archive_data_dir, exist_ok=True)
+
     # Use a progress bar if 'quiet' option is set
     outer_progress_bar = tqdm(total=len(COLLECTIONS), desc="Overall Progress", leave=True) if quiet else None
 
     # Create subplots: 3 rows, 4 plots/row
     total_col = 4
     for ic, collection in enumerate(COLLECTIONS):
+        c_fig, c_ax = plt.subplots(dpi=100)
+        c_ax.set_title(f'# of {collection} Products / Day \nFrom: {dates_list[0]} '
+                       f'to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
+        # c_fig.suptitle(f'# of {collection} Products / Day \nFrom: {dates_list[0]} '
+        #                f'to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
+
         ax = fig.add_subplot(3, total_col, ic + 1)
         products = [0] * NUM_DAYS
         na_products = [0] * NUM_DAYS
@@ -287,8 +304,11 @@ def plot_products(quiet):
                 na_color = adjust_saturation(original_color, 60, lighten=False)
                 ax.bar(x_values[i], products[i], width=bar_width, color=color)
                 ax.bar(x_values[i] + x_width, na_products[i], width=bar_width, color=na_color)
+                c_ax.bar(x_values[i], products[i], width=bar_width, color=color)
+                c_ax.bar(x_values[i] + x_width, na_products[i], width=bar_width, color=na_color)
             else:
                 ax.bar(x_values[i], products[i], width=bar_width, color=color)
+                c_ax.bar(x_values[i], products[i], width=bar_width, color=color)
 
             if inner_progress_bar:
                 inner_progress_bar.update(1)  # Update the inner progress bar
@@ -306,9 +326,13 @@ def plot_products(quiet):
             label.append("North+Central America")
         ax.legend(label, loc="upper right", framealpha=0.2)
         ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
+        c_ax.legend(label, loc="upper right", framealpha=0.2)
+        c_ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
         if "DISP" not in collection:
             ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
             ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
+            c_ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
+            c_ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
 
         check_data_points(samples, std_sigma)
 
@@ -319,6 +343,39 @@ def plot_products(quiet):
         ax.set_xlabel(f"Day of Month")
         ax.set_ylabel("Number of Products")
         ax.set_ylim(0)
+        c_ax.set_xticks(x_values[::2])  # Set ticks to every other index
+        c_ax.set_xticklabels([d.strftime('%d') for d in odd_days], rotation=45)  # Print odd days without leading zeros
+        c_ax.set_xlabel(f"Day of Month")
+        c_ax.set_ylabel("Number of Products")
+        c_ax.set_ylim(0)
+
+        c_fig.legend(
+            handles=[
+                mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle='--', linewidth=1.75, label='Mean'),
+                mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle=':', linewidth=2.0, label='Mean ± 2 STD')
+            ],
+            loc='lower center',
+            bbox_to_anchor=(0.52, -0.01),
+            framealpha=0.5,
+            ncol=2,
+            facecolor=(1.0, 0.75, 0.63, 0.75),
+            edgecolor='black'
+        )
+
+        c_fig.subplots_adjust(left=0.1, bottom=0.12, right=0.9, top=0.9, hspace=0.4, wspace=0.3)
+
+        c_fig.tight_layout(pad=2.0)
+        png_basename = f'opera_daily_products_query_{collection}'
+        png_filename = png_basename + ".png"
+
+        c_fig.savefig(os.path.join(archive_data_dir, png_filename), bbox_inches='tight', dpi=400)
+
+        report['products'][collection] = {
+            'counts': products,
+            'mean': mean,
+            '+2sigma': std_sigma[1],
+            '-2sigma': std_sigma[0],
+        }
 
     # adjust plot positions to allow space for statistical legena
     plt.subplots_adjust(left=0.1, bottom=0.12, right=0.9, top=0.9, hspace=0.4, wspace=0.3)
@@ -339,6 +396,9 @@ def plot_products(quiet):
 
     plt.savefig(png_filename, bbox_inches='tight', dpi=400)
 #    plt.show()
+
+    with open(os.path.join(archive_data_dir, 'query_results.json'), 'w') as outfile:
+        json.dump(report, outfile, indent=4)
 
     if args.quiet:
         outer_progress_bar.close()
