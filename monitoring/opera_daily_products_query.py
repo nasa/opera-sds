@@ -388,11 +388,11 @@ def plot_products(quiet):
     fig.legend(handles=[mean_line, std_line], loc='lower center', bbox_to_anchor=(0.52, 0.0), framealpha=0.5, ncol=2,
                facecolor=(1.0, 0.75, 0.63, 0.75), edgecolor='black')
 
-    plt.tight_layout(pad=2.0)
+    fig.tight_layout(pad=2.0)
     png_basename = 'opera_daily_products_query'
     png_filename = png_basename + ".png"
 
-    plt.savefig(png_filename, bbox_inches='tight', dpi=400)
+    fig.savefig(png_filename, bbox_inches='tight', dpi=400)
 #    plt.show()
 
     with open(os.path.join(archive_data_dir, 'query_results.json'), 'w') as outfile:
