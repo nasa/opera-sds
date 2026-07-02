@@ -29,6 +29,12 @@ jobs:
           cd monitoring
           python opera_daily_products_query.py
 
+      - name: Save Report Artifacts
+        uses: actions/upload-artifacts@v7
+        with:
+          path: 'monitoring/archive_data'
+          retention-days: 30
+
       # reference: https://github.com/stefanzweifel/git-auto-commit-action
       - name: Commit and Push to Github
         uses: stefanzweifel/git-auto-commit-action@v5
