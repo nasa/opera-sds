@@ -8,6 +8,18 @@ on:
     - cron: "0 */4 * * *"
   workflow_dispatch:
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   opera-daily-products-query:
     runs-on: ubuntu-latest
@@ -35,13 +47,27 @@ jobs:
           path: 'monitoring/archive_data'
           retention-days: 30
 
-      # reference: https://github.com/stefanzweifel/git-auto-commit-action
-      - name: Commit and Push to Github
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Clean Individual Artifacts
+        run: rm -rf monitoring/archive_data
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-            file_pattern: 'monitoring/opera_daily_products_query.png'
-            commit_user_name: 'opera_sds'
-            commit_user_email: 'opera-sds@jpl.nasa.gov'
-            commit_author: OPERA SDS <opera-sds@jpl.nasa.gov>
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+#      # reference: https://github.com/stefanzweifel/git-auto-commit-action
+#      - name: Commit and Push to Github
+#        uses: stefanzweifel/git-auto-commit-action@v5
+#        with:
+#            file_pattern: 'monitoring/opera_daily_products_query.png'
+#            commit_user_name: 'opera_sds'
+#            commit_user_email: 'opera-sds@jpl.nasa.gov'
+#            commit_author: OPERA SDS <opera-sds@jpl.nasa.gov>
           
     
