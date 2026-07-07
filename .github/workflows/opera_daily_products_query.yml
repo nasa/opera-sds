@@ -6,6 +6,9 @@ on:
     # Runs around midnight Pacific Time (UTC-7)
     # Doesn't account for daylight saving transitions
     - cron: "0 */4 * * *"
+  # Runs on pushes targeting the default branch
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -25,31 +28,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11.0'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Execute Daily Products Query
         run: |
           cd monitoring
           python opera_daily_products_query.py
-
       - name: Save Report Artifacts
         uses: actions/upload-artifact@v7
         with:
           path: 'monitoring/archive_data'
           retention-days: 30
-
       - name: Clean Individual Artifacts
         run: rm -rf monitoring/archive_data
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages Artifact
@@ -60,14 +57,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-#      # reference: https://github.com/stefanzweifel/git-auto-commit-action
-#      - name: Commit and Push to Github
-#        uses: stefanzweifel/git-auto-commit-action@v5
-#        with:
-#            file_pattern: 'monitoring/opera_daily_products_query.png'
-#            commit_user_name: 'opera_sds'
-#            commit_user_email: 'opera-sds@jpl.nasa.gov'
-#            commit_author: OPERA SDS <opera-sds@jpl.nasa.gov>
-          
-    
