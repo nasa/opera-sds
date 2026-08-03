@@ -718,7 +718,7 @@ def trigger_latency_graphs(temporal_delta=90, revision_delta=14, limit_outliers=
 
 def main():
     """Produce OPERA daily products plots"""
-    trigger_latency_graphs()
+    trigger_latency_graphs(temporal_delta=7, revision_delta=7)
     '''
     output_results = get_output_products("OPERA_L2_RTC-S1_V1", temporal_begin, updated_since)
     umm_json_result = json.loads(output_results[0])
