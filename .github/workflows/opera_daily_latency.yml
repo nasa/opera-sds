@@ -36,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           path: 'monitoring/opera_latency_query.png'
-          job_alias: latest
+          name: 'Latency_Plot'
           retention-days: 90
           archive: false
 
