@@ -2,10 +2,10 @@
 name: OPERA Daily Latency Query
 
 on:
-  schedule:
-    # Runs around 5pm Pacific Time (UTC-7) everyday
-    # Doesn't account for daylight saving transitions
-    - cron: "0 17 */1 * *"
+#  schedule:
+#    # Runs around 5pm Pacific Time (UTC-7) everyday
+#    # Doesn't account for daylight saving transitions
+#    - cron: "0 17 */1 * *"
   workflow_dispatch:
 
 jobs:
@@ -33,12 +33,17 @@ jobs:
           python latency_graph.py
 
       - name: Save plot artifact
+        id: upload-plot
         uses: actions/upload-artifact@v7
         with:
           path: 'monitoring/opera_latency_query.png'
           name: 'Latency_Plot'
           retention-days: 90
           archive: false
+
+      - name: Update README
+        run: |
+          sed -I 's/!\[OPERA Products Latency\].*/![OPERA Products Latency](${{ steps.upload-plot.outputs.artifact-url }})/' README.md
 
       # reference: https://github.com/stefanzweifel/git-auto-commit-action
 #      - name: Commit and Push to Github
