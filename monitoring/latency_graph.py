@@ -1,26 +1,13 @@
-import argparse
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.lines as mlines
-import asyncio
 import datetime
 from datetime import timedelta
-import time
-from time import gmtime, strftime
-from dateutil.relativedelta import relativedelta
-import functools
-import logging
 import logging.handlers
 import os
-import re
-import sys
-import urllib.parse
-from collections import defaultdict
-from typing import Union, Iterable
 from cmr import GranuleQuery, CMR_UAT
 import json
 import statistics
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import time
 START_TIME = time.time()
@@ -30,18 +17,21 @@ TODAY = datetime.date.today()
 
 # print(today)
 
+logging.basicConfig(level=logging.DEBUG)
+
 
 COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "empty", "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
 # override to just do one for now
 COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"]
+# COLLECTIONS = ["OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1"]
 
 UAT_COLLECTIONS = {"OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"}
 
 OUT_TO_INP_DICT = {
     "DSWx-HLS": ["HLSL30", "HLSS30"],  # DSWx-HLS uses both Landsat and Sentinel-2 inputs
     "DSWx-S1": ["OPERA_L2_RTC-S1_V1"],
-    "RTC-S1": ["SENTINEL-1A_SLC"],
-    "CSLC-S1": ["SENTINEL-1A_SLC"],
+    "RTC-S1": ["SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "SENTINEL-1D_SLC", ],
+    "CSLC-S1": ["SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "SENTINEL-1D_SLC", ],
     "DIST-ALERT-S1": ["OPERA_L2_RTC-S1_V1"]
 }
 
@@ -256,6 +246,7 @@ def parse_output_granules(output_results):
 def cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type):
     '''
     search the input granules and from that parse and match the inputs.
+    Supports querying multiple input collections (e.g., HLSL30 and HLSS30 for DSWx-HLS).
     '''
     collections_to_query = OUT_TO_INP_DICT[output_prod_type]
 
@@ -645,50 +636,61 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
     return png_filename
 
 
-def trigger_latency_graphs(temporal_delta_months=3, revision_delta=14, limit_outliers=True):
+def get_prod_time_taken(collection, temporal_begin, updated_since, revision_delta, limit_outliers=True):
+    if collection in UAT_COLLECTIONS:
+        limit = 5 if limit_outliers else None
+        uat_updated_since = today - timedelta(days=max(revision_delta, 30))
+        output_prod_type, prod_time_taken_dict = compute_dist_s1_latency(
+            collection, temporal_begin, uat_updated_since, limit=limit
+        )
+        return prod_time_taken_dict, output_prod_type
+
+    print(f'Get products for {collection}')
+    output_results = get_output_products(collection, temporal_begin, updated_since)
+    # print("output_results", output_results)
+    if '"hits":0,' in output_results[0]:
+        print("hits 0")
+        output_prod_type = collection
+        return {}, output_prod_type
+    output_prod_type, cmr_input_begin_time, cmr_input_end_time, inputgran_output_revision_dict = parse_output_granules(
+        output_results)
+    # prod_type, prod_time_taken_dict = parse_output_granules(output_results)
+    #
+    print(f'Get inputs for {output_prod_type}')
+    input_batch_result_dict = cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
+    # limit outliers
+    limit = None
+    if limit_outliers:
+        if "OPERA_L3_DSWX-HLS" in collection:
+            limit = 10
+        else:
+            limit = 5
+
+    prod_time_taken_dict = parse_input_granules(input_batch_result_dict, inputgran_output_revision_dict, limit=limit)
+    return prod_time_taken_dict, output_prod_type
+
+
+def trigger_latency_graphs(temporal_delta=90, revision_delta=14, limit_outliers=True):
     '''
     create latency graphs
     TEMPORARILY TESTING 3 DAYS TEMPORAL CHILL
     '''
-    # today = string_to_datetime("2025-05-09T23:59:59Z")
-
 
     updated_since = today - timedelta(days=revision_delta)
-    temporal_begin = today - relativedelta(months=temporal_delta_months)
-    # temporal_begin = today - timedelta(days=temporal_delta_months)
+    temporal_begin = today - timedelta(days=temporal_delta)
 
     time_taken_dict = {}
-    for collection in COLLECTIONS:
-        if collection in UAT_COLLECTIONS:
-            limit = 5 if limit_outliers else None
-            uat_updated_since = today - timedelta(days=max(revision_delta, 30))
-            output_prod_type, prod_time_taken_dict = compute_dist_s1_latency(
-                collection, temporal_begin, uat_updated_since, limit=limit
-            )
+
+    futures = []
+
+    with ThreadPoolExecutor() as pool:
+        for collection in COLLECTIONS:
+            futures.append(pool.submit(get_prod_time_taken, collection, temporal_begin,
+                                       updated_since, revision_delta, limit_outliers=limit_outliers))
+
+        for future in as_completed(futures):
+            prod_time_taken_dict, output_prod_type = future.result()
             time_taken_dict[output_prod_type] = prod_time_taken_dict
-            continue
-
-        output_results = get_output_products(collection, temporal_begin, updated_since)
-        # print("output_results", output_results)
-        if '"hits":0,' in output_results[0]:
-            print("hits 0")
-            output_prod_type = collection
-            time_taken_dict[output_prod_type] = {}
-            continue
-        output_prod_type, cmr_input_begin_time, cmr_input_end_time, inputgran_output_revision_dict = parse_output_granules(output_results)
-        # prod_type, prod_time_taken_dict = parse_output_granules(output_results)
-        #
-        input_batch_result_dict = cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
-        # limit outliers
-        limit = None
-        if limit_outliers:
-            if "OPERA_L3_DSWX-HLS" in collection:
-                limit = 10
-            else:
-                limit = 5
-
-        prod_time_taken_dict = parse_input_granules(input_batch_result_dict, inputgran_output_revision_dict, limit=limit)
-        time_taken_dict[output_prod_type] = prod_time_taken_dict
 
     with open('time_taken_dict.json', 'w') as fp:
         json.dump(time_taken_dict, fp, indent=2)
