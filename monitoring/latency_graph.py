@@ -412,7 +412,8 @@ def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=Non
                 revision_dt = string_to_datetime(revision_date)
                 sensing_dt = string_to_datetime(sensing_begin)
                 creation_dt = string_to_datetime(creation_ts_str, gran_input="DIST-ALERT-S1")
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
+                print(e)
                 continue
 
             out_inp_rev = (revision_dt - creation_dt).total_seconds() / (60 * 60 * 24)
@@ -421,6 +422,7 @@ def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=Non
 
             if limit:
                 if out_inp_rev > limit or out_inp_temp > limit or inp_rev_inp_temp > limit:
+                    print(f'Skipping product {native_id} as it exceeds limits - limit: {limit=} {out_inp_rev=} {out_inp_temp=} {inp_rev_inp_temp=}')
                     continue
 
             time_taken_dict["output_inp_revision_diff"].append(out_inp_rev)
