@@ -220,10 +220,12 @@ def plot_products(quiet):
 
     COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1",
                    "SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
-                   "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+                   "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1",
+                   "OPERA_L3_DIST-ALERT-S1_V1",]
     LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
               "S1C (input)", "S1D (input)", "RTC-S1 (output)", "CSLC-S1 (output)",
-              "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
+              "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)",
+              "DIST-ALERT-S1 (output)",]
 
     NA_COLLECTIONS = ["SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
                       "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
@@ -234,13 +236,14 @@ def plot_products(quiet):
         (0.0, 0.78, 0.55),
         (1.0, 0.22, 0.45),   # Compliment
         (1.0, 0.22, 0.45),
-        (0.0, 0.62, 0.95),   # Light Blue for S1A
-        (0.4, 0.8, 0.95),    # Lighter Blue for S1C
+        (0.0, 0.62, 0.95),   # Light Blue for S1C
+        (0.4, 0.8, 0.95),    # Lighter Blue for S1D
         (1.0, 0.38, 0.05),   # Orange for RTC-S1
         (1.0, 0.38, 0.05),   # Orange for CSLC-S1
         (0.6, 0.12, 0.7),    # Purple for TROPO-ZENITH
         (1.0, 0.33, 0.05),
-        (1.0, 0.42, 0.15)
+        (1.0, 0.42, 0.15),
+        (1.0, 0.42, 0.15),
     ]
 
     today = datetime.date.today()
