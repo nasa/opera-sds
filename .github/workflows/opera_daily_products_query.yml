@@ -53,6 +53,7 @@ jobs:
             cd monitoring
             python latency_graph.py
       - name: Copy latency plot
+        continue-on-error: true
         run: |
           cd monitoring
           cp opera_latency_query.png archive_data/
