@@ -291,7 +291,15 @@ def plot_products(quiet):
 
         inner_progress_bar = tqdm(total=NUM_DAYS, desc=f"Processing {collection}", leave=False) if quiet else None
 
-        for i, date in enumerate(dates_list):
+        # TODO: Revert this once DIST-S1 FWD production begins
+        if collection == 'OPERA_L3_DIST-ALERT-S1_V1':
+            end_day = datetime.datetime(2026, 2, 15)
+            tmp_list = [end_day - timedelta(days=x) for x in range(NUM_DAYS)]
+            tmp_list.reverse()
+        else:
+            tmp_list = dates_list
+
+        for i, date in enumerate(tmp_list):
             products[i] = get_products(collection, date, north_america_flag=False)
             logging.info(f"Collection: {collection_name} Day: {date} # of products in CMR: {products[i]}")
 
@@ -347,7 +355,7 @@ def plot_products(quiet):
         check_data_points(samples, std_sigma)
 
         # Set x-ticks to show only odd days
-        odd_days = [d for i, d in enumerate(dates_list) if i % 2 == 0]  # Get odd days
+        odd_days = [d for i, d in enumerate(tmp_list) if i % 2 == 0]  # Get odd days
         ax.set_xticks(x_values[::2])  # Set ticks to every other index
         ax.set_xticklabels([d.strftime('%d') for d in odd_days], rotation=45)  # Print odd days without leading zeros
         ax.set_xlabel(f"Day of Month")
