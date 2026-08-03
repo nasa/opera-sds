@@ -22,10 +22,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "empty", "SENTINEL-1A_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1"]
 # override to just do one for now
-COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"]
+COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DIST-ALERT-S1_V1"]
 # COLLECTIONS = ["OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1"]
-
-UAT_COLLECTIONS = {"OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"}
 
 OUT_TO_INP_DICT = {
     "DSWx-HLS": ["HLSL30", "HLSS30"],  # DSWx-HLS uses both Landsat and Sentinel-2 inputs
@@ -360,7 +358,7 @@ def parse_input_granules(gran_batch_result, inputgran_output_revision_dict, limi
 
     return time_taken_dict
 
-def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=None):
+def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=None, uat=False):
     """
     Compute latency for DIST-ALERT-S1 from CMR UAT.
     InputGranules is not populated for this product in CMR UAT,
@@ -376,7 +374,10 @@ def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=Non
       output_inp_temporal_diff  -> CMR revision - sensing time (total latency)
       inp_revision_inp_temporal_diff -> product creation - sensing time (processing latency)
     """
-    api = get_query_api(mode=CMR_UAT)
+    if uat:
+        api = get_query_api(mode=CMR_UAT)
+    else:
+        api = get_query_api()
     api.format("umm_json")
     api.short_name(collection)
     api.revision_date(updated_since, today)
@@ -648,11 +649,11 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
 
 
 def get_prod_time_taken(collection, temporal_begin, updated_since, revision_delta, limit_outliers=True):
-    if collection in UAT_COLLECTIONS:
+    if 'DIST-ALERT-S1' in collection:
         limit = 5 if limit_outliers else None
-        uat_updated_since = today - timedelta(days=max(revision_delta, 30))
+        dist_updated_since = today - timedelta(days=max(revision_delta, 30))
         output_prod_type, prod_time_taken_dict = compute_dist_s1_latency(
-            collection, temporal_begin, uat_updated_since, limit=limit
+            collection, temporal_begin, dist_updated_since, limit=limit
         )
         return prod_time_taken_dict, output_prod_type
 
