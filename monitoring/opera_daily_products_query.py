@@ -175,6 +175,12 @@ def get_products(collection, date, north_america_flag=False, central_america_fla
                               [-108.94922, 32.01893], [-110.91797, 31.59868], [-114.64453, 32.79634]]
 
     api = GranuleQuery()
+
+    if os.getenv('EDL_TOKEN', ''):
+        api.token(os.getenv('EDL_TOKEN'))
+    elif os.getenv('EDL_BEARER_TOKEN', ''):
+        api.bearer_token(os.getenv('EDL_BEARER_TOKEN'))
+
     api.short_name(collection)
     datetime_start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
     datetime_end = datetime.datetime(date.year, date.month, date.day, 23, 59, 59)
@@ -213,11 +219,16 @@ def plot_products(quiet):
     plot_size = (16 * x_scale, 9 * y_scale)
 
     COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1",
-                   "SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+                   "SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
+                   "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1",
+                   "OPERA_L3_DIST-ALERT-S1_V1",]
     LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
-              "S1A (input)", "S1C (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
+              "S1C (input)", "S1D (input)", "RTC-S1 (output)", "CSLC-S1 (output)",
+              "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)",
+              "DIST-ALERT-S1 (output)",]
 
-    NA_COLLECTIONS = ["SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+    NA_COLLECTIONS = ["SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
+                      "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
 
     # Use complementary colors to differential input and output
     COLORS = [
@@ -225,13 +236,14 @@ def plot_products(quiet):
         (0.0, 0.78, 0.55),
         (1.0, 0.22, 0.45),   # Compliment
         (1.0, 0.22, 0.45),
-        (0.0, 0.62, 0.95),   # Light Blue for S1A
-        (0.4, 0.8, 0.95),    # Lighter Blue for S1C
+        (0.0, 0.62, 0.95),   # Light Blue for S1C
+        (0.4, 0.8, 0.95),    # Lighter Blue for S1D
         (1.0, 0.38, 0.05),   # Orange for RTC-S1
         (1.0, 0.38, 0.05),   # Orange for CSLC-S1
         (0.6, 0.12, 0.7),    # Purple for TROPO-ZENITH
         (1.0, 0.33, 0.05),
-        (1.0, 0.42, 0.15)
+        (1.0, 0.42, 0.15),
+        (1.0, 0.42, 0.15),
     ]
 
     today = datetime.date.today()
@@ -279,7 +291,15 @@ def plot_products(quiet):
 
         inner_progress_bar = tqdm(total=NUM_DAYS, desc=f"Processing {collection}", leave=False) if quiet else None
 
-        for i, date in enumerate(dates_list):
+        # TODO: Revert this once DIST-S1 FWD production begins
+        if collection == 'OPERA_L3_DIST-ALERT-S1_V1':
+            end_day = datetime.datetime(2026, 2, 15)
+            tmp_list = [end_day - timedelta(days=x) for x in range(NUM_DAYS)]
+            tmp_list.reverse()
+        else:
+            tmp_list = dates_list
+
+        for i, date in enumerate(tmp_list):
             products[i] = get_products(collection, date, north_america_flag=False)
             logging.info(f"Collection: {collection_name} Day: {date} # of products in CMR: {products[i]}")
 
@@ -335,7 +355,7 @@ def plot_products(quiet):
         check_data_points(samples, std_sigma)
 
         # Set x-ticks to show only odd days
-        odd_days = [d for i, d in enumerate(dates_list) if i % 2 == 0]  # Get odd days
+        odd_days = [d for i, d in enumerate(tmp_list) if i % 2 == 0]  # Get odd days
         ax.set_xticks(x_values[::2])  # Set ticks to every other index
         ax.set_xticklabels([d.strftime('%d') for d in odd_days], rotation=45)  # Print odd days without leading zeros
         ax.set_xlabel(f"Day of Month")

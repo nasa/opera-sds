@@ -37,6 +37,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Execute Daily Products Query
+        env:
+          EDL_TOKEN: ${{ secrets.EDL_TOKEN || '' }}
+          EDL_BEARER_TOKEN: ${{ secrets.EDL_BEARER_TOKEN || '' }}
         run: |
           cd monitoring
           python opera_daily_products_query.py
