@@ -547,6 +547,10 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
         # for comparison_title, times_list in prod_dict.items():
         for comparison_title in comp_title_order:
             times_list = prod_dict[comparison_title]
+
+            if len(times_list) == 0:
+                print(f'No data for {prod_type} {comparison_title}, skipping')
+                continue
             # plot_count += 1
             mean = statistics.fmean(times_list)
             print("comparison_title", comparison_title)
