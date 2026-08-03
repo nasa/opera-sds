@@ -35,6 +35,17 @@ OUT_TO_INP_DICT = {
     "DIST-ALERT-S1": ["OPERA_L2_RTC-S1_V1"]
 }
 
+
+def get_query_api(**kwargs) -> GranuleQuery:
+    api = GranuleQuery(**kwargs)
+
+    if os.getenv('EDL_TOKEN', ''):
+        api.token(os.getenv('EDL_TOKEN'))
+    elif os.getenv('EDL_BEARER_TOKEN', ''):
+        api.bearer_token(os.getenv('EDL_BEARER_TOKEN'))
+
+    return api
+
 def roundup(x):
     return int(math.ceil(x / 10.0) * 10)
 
@@ -64,7 +75,7 @@ def get_output_products(collection, temporal_begin, updated_since, north_america
                               [-103.28906, 29.59414], [-104.37891, 29.94556], [-105.22266, 31.63237],
                               [-108.94922, 32.01893], [-110.91797, 31.59868], [-114.64453, 32.79634]]
 
-    api = GranuleQuery()
+    api = get_query_api()
     # ummjson format is needed because it includes the input granules
     # it says that granule query doesnt support ummjson but it kinda does but leads to some funkiness later
     api.format("umm_json")
@@ -149,7 +160,7 @@ def get_latest_input_granule(input_gran_list, prod_type):
 
 
 def get_granule_metadata(granule_id, short_name):
-    api = GranuleQuery()
+    api = get_query_api()
     api.format("umm_json")
     api.short_name(short_name)
     api.granule_ur(granule_id)
@@ -262,7 +273,7 @@ def cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
     combined_results = []
     for short_name in collections_to_query:
         print(f"Querying input collection: {short_name}")
-        api = GranuleQuery()
+        api = get_query_api()
         api.format("umm_json")
         api.short_name(short_name)
         api.temporal(cmr_input_begin_time, cmr_input_end_time)
@@ -365,7 +376,7 @@ def compute_dist_s1_latency(collection, temporal_begin, updated_since, limit=Non
       output_inp_temporal_diff  -> CMR revision - sensing time (total latency)
       inp_revision_inp_temporal_diff -> product creation - sensing time (processing latency)
     """
-    api = GranuleQuery(mode=CMR_UAT)
+    api = get_query_api(mode=CMR_UAT)
     api.format("umm_json")
     api.short_name(collection)
     api.revision_date(updated_since, today)
