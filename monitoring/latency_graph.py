@@ -586,6 +586,11 @@ def histogram_plot_latency(time_taken_dict, temp_time, rev_time, fake_today=None
         ax.set_title(prod_type + " Latency")
         print("prod_type", prod_type)
         print("mean_set", mean_set)
+
+        if len(time_set) == 0:
+            print(f'No data for {prod_type}, skipping')
+            continue
+
         # stacked = True
         if stacked:
             ax.hist(time_set, bins=range(max_time_list + 2), alpha=0.5, edgecolor='black', color=color_set, label=title_set, histtype="barstacked")
