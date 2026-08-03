@@ -175,6 +175,12 @@ def get_products(collection, date, north_america_flag=False, central_america_fla
                               [-108.94922, 32.01893], [-110.91797, 31.59868], [-114.64453, 32.79634]]
 
     api = GranuleQuery()
+
+    if os.getenv('EDL_TOKEN', ''):
+        api.token(os.getenv('EDL_TOKEN'))
+    elif os.getenv('EDL_BEARER_TOKEN', ''):
+        api.bearer_token(os.getenv('EDL_BEARER_TOKEN'))
+
     api.short_name(collection)
     datetime_start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
     datetime_end = datetime.datetime(date.year, date.month, date.day, 23, 59, 59)
