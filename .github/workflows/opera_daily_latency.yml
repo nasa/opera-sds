@@ -25,17 +25,28 @@ jobs:
           pip install -r requirements.txt
 
       - name: Execute Daily Product Latency
+        env:
+          EDL_TOKEN: ${{ secrets.EDL_TOKEN || '' }}
+          EDL_BEARER_TOKEN: ${{ secrets.EDL_BEARER_TOKEN || '' }}
         run: |
           cd monitoring
           python latency_graph.py
 
-      # reference: https://github.com/stefanzweifel/git-auto-commit-action
-      - name: Commit and Push to Github
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Save plot artifact
+        uses: actions/upload-artifact@v7
         with:
-            file_pattern: 'monitoring/opera_latency_query.png'
-            commit_user_name: 'opera_sds'
-            commit_user_email: 'opera-sds@jpl.nasa.gov'
-            commit_author: OPERA SDS <opera-sds@jpl.nasa.gov>
+          path: 'monitoring/opera_latency_query.png'
+          job_alias: latest
+          retention-days: 90
+          archive: false
+
+      # reference: https://github.com/stefanzweifel/git-auto-commit-action
+#      - name: Commit and Push to Github
+#        uses: stefanzweifel/git-auto-commit-action@v5
+#        with:
+#            file_pattern: 'monitoring/opera_latency_query.png'
+#            commit_user_name: 'opera_sds'
+#            commit_user_email: 'opera-sds@jpl.nasa.gov'
+#            commit_author: OPERA SDS <opera-sds@jpl.nasa.gov>
           
     
