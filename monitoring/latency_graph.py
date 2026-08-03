@@ -38,11 +38,11 @@ COLLECTIONS =  ["OPERA_L3_DSWX-S1_V1", "OPERA_L3_DSWX-HLS_V1", "OPERA_L2_RTC-S1_
 UAT_COLLECTIONS = {"OPERA_L3_DIST-ALERT-S1_PROVISIONAL_V0"}
 
 OUT_TO_INP_DICT = {
-    "DSWx-HLS": "HLSL30",
-    "DSWx-S1": "OPERA_L2_RTC-S1_V1",
-    "RTC-S1": "SENTINEL-1A_SLC",
-    "CSLC-S1": "SENTINEL-1A_SLC",
-    "DIST-ALERT-S1": "OPERA_L2_RTC-S1_V1"
+    "DSWx-HLS": ["HLSL30", "HLSS30"],  # DSWx-HLS uses both Landsat and Sentinel-2 inputs
+    "DSWx-S1": ["OPERA_L2_RTC-S1_V1"],
+    "RTC-S1": ["SENTINEL-1A_SLC"],
+    "CSLC-S1": ["SENTINEL-1A_SLC"],
+    "DIST-ALERT-S1": ["OPERA_L2_RTC-S1_V1"]
 }
 
 def roundup(x):
@@ -257,10 +257,8 @@ def cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
     '''
     search the input granules and from that parse and match the inputs.
     '''
-    short_name = OUT_TO_INP_DICT[output_prod_type]
-    api = GranuleQuery()
-    api.format("umm_json")
-    api.short_name(short_name)
+    collections_to_query = OUT_TO_INP_DICT[output_prod_type]
+
     print("input_search begin time: ", cmr_input_begin_time)
     print("input_search end time: ", cmr_input_end_time)
     cmr_input_begin_time = string_to_datetime(cmr_input_begin_time, gran_input=output_prod_type)
@@ -269,12 +267,20 @@ def cmr_input_search(cmr_input_begin_time, cmr_input_end_time, output_prod_type)
     cmr_input_begin_time = cmr_input_begin_time - timedelta(days=1)
     cmr_input_end_time = cmr_input_end_time + timedelta(days=1)
 
-    api.temporal(cmr_input_begin_time, cmr_input_end_time)
-    # api.granule_ur(granule_id)
+    # Query each collection and combine results
+    combined_results = []
+    for short_name in collections_to_query:
+        print(f"Querying input collection: {short_name}")
+        api = GranuleQuery()
+        api.format("umm_json")
+        api.short_name(short_name)
+        api.temporal(cmr_input_begin_time, cmr_input_end_time)
+        gran_batch_result = api.get_all()
+        combined_results.extend(gran_batch_result)
+        print(f"  Found {len(gran_batch_result)} batches from {short_name}")
+
     print()
-    gran_batch_result = api.get_all()
-    # print("input cmr search list size: ", gran_batch_result[0])
-    return gran_batch_result
+    return combined_results
 
 
 def parse_input_granules(gran_batch_result, inputgran_output_revision_dict, limit=None):

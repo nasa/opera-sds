@@ -7,6 +7,7 @@ from datetime import timedelta
 from time import gmtime, strftime
 import logging
 import json
+import os
 
 from cmr import GranuleQuery
 import numpy as np
@@ -174,6 +175,12 @@ def get_products(collection, date, north_america_flag=False, central_america_fla
                               [-108.94922, 32.01893], [-110.91797, 31.59868], [-114.64453, 32.79634]]
 
     api = GranuleQuery()
+
+    if os.getenv('EDL_TOKEN', ''):
+        api.token(os.getenv('EDL_TOKEN'))
+    elif os.getenv('EDL_BEARER_TOKEN', ''):
+        api.bearer_token(os.getenv('EDL_BEARER_TOKEN'))
+
     api.short_name(collection)
     datetime_start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
     datetime_end = datetime.datetime(date.year, date.month, date.day, 23, 59, 59)
@@ -212,11 +219,16 @@ def plot_products(quiet):
     plot_size = (16 * x_scale, 9 * y_scale)
 
     COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1",
-                   "SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+                   "SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
+                   "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1",
+                   "OPERA_L3_DIST-ALERT-S1_V1",]
     LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
-              "S1A (input)", "S1C (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
+              "S1C (input)", "S1D (input)", "RTC-S1 (output)", "CSLC-S1 (output)",
+              "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)",
+              "DIST-ALERT-S1 (output)",]
 
-    NA_COLLECTIONS = ["SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+    NA_COLLECTIONS = ["SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
+                      "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
 
     # Use complementary colors to differential input and output
     COLORS = [
@@ -224,13 +236,14 @@ def plot_products(quiet):
         (0.0, 0.78, 0.55),
         (1.0, 0.22, 0.45),   # Compliment
         (1.0, 0.22, 0.45),
-        (0.0, 0.62, 0.95),   # Light Blue for S1A
-        (0.4, 0.8, 0.95),    # Lighter Blue for S1C
+        (0.0, 0.62, 0.95),   # Light Blue for S1C
+        (0.4, 0.8, 0.95),    # Lighter Blue for S1D
         (1.0, 0.38, 0.05),   # Orange for RTC-S1
         (1.0, 0.38, 0.05),   # Orange for CSLC-S1
         (0.6, 0.12, 0.7),    # Purple for TROPO-ZENITH
         (1.0, 0.33, 0.05),
-        (1.0, 0.42, 0.15)
+        (1.0, 0.42, 0.15),
+        (1.0, 0.42, 0.15),
     ]
 
     today = datetime.date.today()
@@ -243,12 +256,26 @@ def plot_products(quiet):
     fig = plt.figure(figsize=plot_size, dpi=100)
     fig.suptitle(f'# of Products / Day from: {dates_list[0]} to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
 
+    report = {
+        'data_from': dates_list[0].strftime('%Y-%m-%d %H:%M:%S'),
+        'data_to': dates_list[-1].strftime('%Y-%m-%d %H:%M:%S'),
+        'report_time': now,
+        'products': {}
+    }
+
+    archive_data_dir = 'archive_data'
+    os.makedirs(archive_data_dir, exist_ok=True)
+
     # Use a progress bar if 'quiet' option is set
     outer_progress_bar = tqdm(total=len(COLLECTIONS), desc="Overall Progress", leave=True) if quiet else None
 
     # Create subplots: 3 rows, 4 plots/row
     total_col = 4
     for ic, collection in enumerate(COLLECTIONS):
+        c_fig, c_ax = plt.subplots(dpi=100)
+        c_ax.set_title(f'# of {collection} Products / Day \nFrom: {dates_list[0]} '
+                       f'to: {dates_list[NUM_DAYS-1]} (Last Updated: {now} GMT)')
+
         ax = fig.add_subplot(3, total_col, ic + 1)
         products = [0] * NUM_DAYS
         na_products = [0] * NUM_DAYS
@@ -264,7 +291,15 @@ def plot_products(quiet):
 
         inner_progress_bar = tqdm(total=NUM_DAYS, desc=f"Processing {collection}", leave=False) if quiet else None
 
-        for i, date in enumerate(dates_list):
+        # TODO: Revert this once DIST-S1 FWD production begins
+        if collection == 'OPERA_L3_DIST-ALERT-S1_V1':
+            end_day = datetime.datetime(2026, 2, 15)
+            tmp_list = [end_day - timedelta(days=x) for x in range(NUM_DAYS)]
+            tmp_list.reverse()
+        else:
+            tmp_list = dates_list
+
+        for i, date in enumerate(tmp_list):
             products[i] = get_products(collection, date, north_america_flag=False)
             logging.info(f"Collection: {collection_name} Day: {date} # of products in CMR: {products[i]}")
 
@@ -287,8 +322,11 @@ def plot_products(quiet):
                 na_color = adjust_saturation(original_color, 60, lighten=False)
                 ax.bar(x_values[i], products[i], width=bar_width, color=color)
                 ax.bar(x_values[i] + x_width, na_products[i], width=bar_width, color=na_color)
+                c_ax.bar(x_values[i], products[i], width=bar_width, color=color)
+                c_ax.bar(x_values[i] + x_width, na_products[i], width=bar_width, color=na_color)
             else:
                 ax.bar(x_values[i], products[i], width=bar_width, color=color)
+                c_ax.bar(x_values[i], products[i], width=bar_width, color=color)
 
             if inner_progress_bar:
                 inner_progress_bar.update(1)  # Update the inner progress bar
@@ -306,19 +344,56 @@ def plot_products(quiet):
             label.append("North+Central America")
         ax.legend(label, loc="upper right", framealpha=0.2)
         ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
+        c_ax.legend(label, loc="upper right", framealpha=0.2)
+        c_ax.axhline(mean, color=(0.0, 0.4, 0.04, 0.85), linestyle='--', linewidth=1.75, label='Mean')
         if "DISP" not in collection:
             ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
             ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
+            c_ax.axhline(std_sigma[0], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='-2-sigma')
+            c_ax.axhline(std_sigma[1], color=(0.0, 0.4, 0.04, 0.85), linestyle=':', linewidth=2.0, label='+2-sigma')
 
         check_data_points(samples, std_sigma)
 
         # Set x-ticks to show only odd days
-        odd_days = [d for i, d in enumerate(dates_list) if i % 2 == 0]  # Get odd days
+        odd_days = [d for i, d in enumerate(tmp_list) if i % 2 == 0]  # Get odd days
         ax.set_xticks(x_values[::2])  # Set ticks to every other index
         ax.set_xticklabels([d.strftime('%d') for d in odd_days], rotation=45)  # Print odd days without leading zeros
         ax.set_xlabel(f"Day of Month")
         ax.set_ylabel("Number of Products")
         ax.set_ylim(0)
+        c_ax.set_xticks(x_values[::2])  # Set ticks to every other index
+        c_ax.set_xticklabels([d.strftime('%d') for d in odd_days], rotation=45)  # Print odd days without leading zeros
+        c_ax.set_xlabel(f"Day of Month")
+        c_ax.set_ylabel("Number of Products")
+        c_ax.set_ylim(0)
+
+        c_fig.legend(
+            handles=[
+                mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle='--', linewidth=1.75, label='Mean'),
+                mlines.Line2D([], [], color=(0.0, 0.4, 0.04, 1.0), linestyle=':', linewidth=2.0, label='Mean ± 2 STD')
+            ],
+            loc='lower center',
+            bbox_to_anchor=(0.52, -0.01),
+            framealpha=0.5,
+            ncol=2,
+            facecolor=(1.0, 0.75, 0.63, 0.75),
+            edgecolor='black'
+        )
+
+        c_fig.subplots_adjust(left=0.1, bottom=0.12, right=0.9, top=0.9, hspace=0.4, wspace=0.3)
+
+        c_fig.tight_layout(pad=2.0)
+        png_basename = f'opera_daily_products_query_{collection}'
+        png_filename = png_basename + ".png"
+
+        c_fig.savefig(os.path.join(archive_data_dir, png_filename), bbox_inches='tight', dpi=400)
+
+        report['products'][collection] = {
+            'counts': products,
+            'mean': mean,
+            '+2sigma': std_sigma[1],
+            '-2sigma': std_sigma[0],
+        }
 
     # adjust plot positions to allow space for statistical legena
     plt.subplots_adjust(left=0.1, bottom=0.12, right=0.9, top=0.9, hspace=0.4, wspace=0.3)
@@ -333,12 +408,15 @@ def plot_products(quiet):
     fig.legend(handles=[mean_line, std_line], loc='lower center', bbox_to_anchor=(0.52, 0.0), framealpha=0.5, ncol=2,
                facecolor=(1.0, 0.75, 0.63, 0.75), edgecolor='black')
 
-    plt.tight_layout(pad=2.0)
+    fig.tight_layout(pad=2.0)
     png_basename = 'opera_daily_products_query'
     png_filename = png_basename + ".png"
 
-    plt.savefig(png_filename, bbox_inches='tight', dpi=400)
+    fig.savefig(png_filename, bbox_inches='tight', dpi=400)
 #    plt.show()
+
+    with open(os.path.join(archive_data_dir, 'query_results.json'), 'w') as outfile:
+        json.dump(report, outfile, indent=4)
 
     if args.quiet:
         outer_progress_bar.close()
