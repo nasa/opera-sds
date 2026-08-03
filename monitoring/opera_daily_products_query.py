@@ -213,11 +213,14 @@ def plot_products(quiet):
     plot_size = (16 * x_scale, 9 * y_scale)
 
     COLLECTIONS = ["HLSL30", "HLSS30", "OPERA_L3_DSWX-HLS_V1", "OPERA_L3_DIST-ALERT-HLS_V1",
-                   "SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+                   "SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
+                   "OPERA_L4_TROPO-ZENITH_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
     LABELS = ["HLSL30 (input)", "HLSS30 (input)", "DSWX-HLS (output)",  "DIST-ALERT-HLS (output)",
-              "S1A (input)", "S1C (input)", "RTC-S1 (output)", "CSLC-S1 (output)", "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
+              "S1C (input)", "S1D (input)", "RTC-S1 (output)", "CSLC-S1 (output)",
+              "TROPO-ZENITH (output)", "DSWX-S1 (output)", "DISP-S1 (output)"]
 
-    NA_COLLECTIONS = ["SENTINEL-1A_SLC", "SENTINEL-1C_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1", "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
+    NA_COLLECTIONS = ["SENTINEL-1C_SLC", "SENTINEL-1D_SLC", "OPERA_L2_RTC-S1_V1", "OPERA_L2_CSLC-S1_V1",
+                      "OPERA_L3_DSWX-S1_V1", "OPERA_L3_DISP-S1_V1"]
 
     # Use complementary colors to differential input and output
     COLORS = [
